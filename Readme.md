@@ -4,50 +4,87 @@
 
 ## 功能特性
 
-- **AI 智能生图**：通过自然语言描述，自动生成契合 2D 游戏风格的像素风素材
-- **对话记忆**：支持多轮对话，Agent 会记住之前的交互上下文
-- **交互式界面**：命令行实时交互，输入需求即可获得素材图片
+- **Web 可视化界面**：Gradio 驱动，右侧大图在线预览 + 历史画廊
+- **保存到本地**：一键下载，支持自定义文件名另存
+- **Rich 终端模式**：彩色面板、加载动画、风格/分类切换
+- **6 种画风预设**：像素风、卡通、等距视角、手绘、暗黑奇幻、赛博朋克
+- **6 类素材模板**：角色、道具、场景、UI元素、怪物、特效
+- **对话记忆**：多轮对话，Agent 记住上下文
+- **快捷示例**：一键填充常用提示词
 
 ## 技术栈
 
 - **框架**：LangChain (Agents + Memory)
 - **语言模型**：Qwen Turbo (阿里云 DashScope)
 - **图像模型**：Wanx v1 (阿里云 DashScope)
-- **API**：阿里云 DashScope
+- **Web UI**：Gradio 4
+- **终端 UI**：Rich
 
 ## 项目结构
 
 ```
 游戏2D素材生成/
-├── agent-ok.py      # 主程序入口
-└── README.md        # 项目说明文档
+├── agent-ok.py       # 主入口（默认 Web，--cli 终端模式）
+├── app.py            # Gradio Web 界面
+├── cli.py            # Rich 终端界面
+├── core.py           # Agent 核心逻辑
+├── requirements.txt  # 依赖
+├── .env.example      # API Key 配置示例
+└── Readme.md
 ```
 
-## 依赖安装
+## 快速开始
+
+### 1. 安装依赖
 
 ```bash
-pip install langchain langchain-openai langchain-classic dashscope pydantic
+pip install -r requirements.txt
 ```
 
-## 使用方法
+### 2. 配置 API Key
 
-1. 确保环境变量或代码中配置了有效的阿里云 DashScope API Key
-2. 运行程序：
-   ```bash
-   python agent-ok.py
-   ```
-3. 在交互式提示符下输入图片需求描述
-4. 输入 `exit` 或 `退出` 结束程序
+复制 `.env.example` 为 `.env`，填入你的 DashScope API Key：
 
-## 示例
+```bash
+copy .env.example .env
+```
+
+或在终端设置环境变量：
+
+```bash
+set DASHSCOPE_API_KEY=your_key_here
+```
+
+### 3. 启动
+
+**Web 界面（推荐）：**
+
+```bash
+python agent-ok.py
+```
+
+浏览器会自动打开 `http://127.0.0.1:7860`
+
+**终端模式：**
+
+```bash
+python agent-ok.py --cli
+```
+
+终端内置命令：`help` · `style` · `cat` · `random` · `clear` · `exit`
+
+## 使用示例
+
+在 Web 界面或终端中输入：
 
 ```
-请输入需求或问题(输入`exit`或`结束`即可退出): 生成一只拿着剑的战士角色
-(返回2D游戏风格的战士素材图片URL)
+持剑的精灵战士，绿色盔甲，待机姿势
 ```
+
+选择「像素风」+「角色」分类，即可生成契合 2D 游戏的素材图。
 
 ## 注意事项
 
 - 需要有效的阿里云 DashScope API Key
-- 生成的图片为 1024x1024 像素
-- 图片风格自动适配 2D 游戏主题
+- 生成的图片为 1024×1024 像素
+- API Key 请勿提交到版本控制
