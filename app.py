@@ -9,7 +9,6 @@ import gradio as gr
 
 from core import (
     CATEGORY_TEMPLATES,
-    CURRENT_SESSION_DIR,
     EXAMPLE_PROMPTS,
     OUTPUT_DIR,
     RANDOM_PROMPTS,

@@ -144,10 +144,20 @@ RANDOM_PROMPTS = [
 OUTPUT_DIR = Path(__file__).parent / "output"
 CURRENT_SESSION_DIR = OUTPUT_DIR / "current_session_images"
 
-_last_result = {
-    "local_path": None,
-    "remote_url": None,
-}
+_last_result = {"local_path": None, "remote_url": None}
+
+_DOWNLOAD_HEADERS = [
+    {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
+        "Accept": "image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.9",
+        "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8",
+        "Referer": "https://dashscope.aliyuncs.com/",
+    },
+    {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+        "Accept": "*/*",
+    },
+]
 
 
 def get_api_key() -> str:
@@ -170,31 +180,15 @@ def clear_current_session_dir() -> None:
         pass
 
 
-def _safe_filename(text: str, max_len: int = 24) -> str:
-    cleaned = re.sub(r"[^\w\u4e00-\u9fff-]", "_", text.strip())
-    cleaned = re.sub(r"_+", "_", cleaned).strip("_")
-    return (cleaned or "asset")[:max_len]
-
-
 def _immediate_download(url: str, prompt: str = "asset") -> str | None:
+    """拿到URL后立即下载到本次会话文件夹，在签名过期前完成。"""
     CURRENT_SESSION_DIR.mkdir(parents=True, exist_ok=True)
-    safe_prompt = _safe_filename(prompt)[:30] if prompt else "asset"
-    filename = f"{datetime.now():%Y%m%d_%H%M%S}_{safe_prompt}.png"
+    safe = re.sub(r"[^\w\u4e00-\u9fff-]", "_", prompt.strip())
+    safe = re.sub(r"_+", "_", safe).strip("_") or "asset"
+    filename = f"{datetime.now():%Y%m%d_%H%M%S}_{safe[:30]}.png"
     filepath = CURRENT_SESSION_DIR / filename
 
-    headers_list = [
-        {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
-            "Accept": "image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.9",
-            "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8",
-            "Referer": "https://dashscope.aliyuncs.com/",
-        },
-        {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-            "Accept": "*/*",
-        },
-    ]
-
+    headers_list = list(_DOWNLOAD_HEADERS)
     try:
         api_key = get_api_key()
         if api_key:

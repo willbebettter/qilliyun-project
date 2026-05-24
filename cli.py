@@ -150,13 +150,14 @@ def run_cli():
 
         with Live(Spinner("dots", text="[cyan]AI 正在生成素材…[/]"), console=console, refresh_per_second=10):
             try:
-                reply, img_url = chat(executor, q)
+                reply, local_path, remote_url = chat(executor, q)
             except Exception as e:
-                reply, img_url = f"生成出错: {e}", None
+                reply, local_path, remote_url = f"生成出错: {e}", None, None
 
         console.print()
         console.print(Panel(Markdown(reply), title="🤖 Agent", border_style="green"))
 
+        img_url = remote_url or local_path
         if img_url:
             console.print(Panel(
                 f"[link={img_url}]{img_url}[/link]\n\n[dim]在浏览器中打开链接即可预览/下载[/]",
