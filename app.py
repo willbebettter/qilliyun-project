@@ -54,11 +54,9 @@ def _preview_info(local_path: str | None, prompt: str = "") -> str:
     )
 
 
-def _clean_reply(reply: str) -> str:
+def _strip_urls(reply: str) -> str:
     text = re.sub(r"https?://\S+", "", reply).strip()
-    if text:
-        return text + "\n\n✅ 素材已生成，请在右侧预览窗口查看。"
-    return "✅ 素材已生成，请在右侧预览窗口查看。"
+    return text
 
 
 def _process_image(img_url: str | None, prompt: str) -> tuple[str | None, str, str | None]:
@@ -75,21 +73,6 @@ def _process_image(img_url: str | None, prompt: str) -> tuple[str | None, str, s
 def _toggle_send_btn(text: str):
     has_content = bool(text and text.strip())
     return gr.update(interactive=has_content)
-
-
-def _yield_final(history, preview_path, info, download_path, has_image, reply):
-    """统一生成最终结果，包括 loading 过渡 + 最终态。"""
-    has_image = download_path is not None
-
-    yield (
-        history,
-        "",
-        preview_path,
-        info,
-        gr.update(interactive=has_image, value=download_path),
-        session.gallery,
-        gr.update(interactive=True),
-    )
 
 
 def respond_generator(message, history):
@@ -110,42 +93,61 @@ def respond_generator(message, history):
     yield (
         loading_history,
         "",
-        gr.update(),                   # preview 保持原样不闪
+        gr.update(),
         NO_PREVIEW,
         gr.update(interactive=False),
         session.gallery,
         gr.update(interactive=False),
     )
 
-    # ② 执行实际生成
-    session.ensure_executor()
+    # ② 执行实际生成，全程 try/except 兜底
     try:
+        session.ensure_executor()
         reply, img_url = chat(session.executor, message)
+
+        preview_path, info, download_path = _process_image(img_url, message)
+        if preview_path and img_url:
+            session.gallery = [(preview_path, message)] + session.gallery[:11]
+
+        safe_reply = _strip_urls(reply)
+        if safe_reply:
+            if preview_path:
+                safe_reply += "\n\n✅ 素材已生成，请在右侧预览窗口查看。"
+            else:
+                safe_reply += "\n\n⚠️ 图片下载失败，但已获取生成结果。"
+        else:
+            safe_reply = "✅ 素材已生成，请在右侧预览窗口查看。" if preview_path else "⚠️ 生成结果获取异常，请重试"
+
+        final_history = history + [
+            {"role": "user", "content": message},
+            {"role": "assistant", "content": safe_reply},
+        ]
+        has_image = download_path is not None
+
+        yield (
+            final_history,
+            "",
+            preview_path if preview_path else gr.update(),
+            info,
+            gr.update(interactive=has_image, value=download_path),
+            session.gallery,
+            gr.update(interactive=True),
+        )
+
     except Exception as e:
-        reply, img_url = f"❌ 生成失败: {e}", None
-
-    preview_path, info, download_path = _process_image(img_url, message)
-    if preview_path and img_url:
-        session.gallery = [(preview_path, message)] + session.gallery[:11]
-        reply = _clean_reply(reply) if not reply.startswith("❌") else reply
-
-    final_history = history + [
-        {"role": "user", "content": message},
-        {"role": "assistant", "content": reply},
-    ]
-    has_image = download_path is not None
-    display_value = img_url if img_url else preview_path
-
-    # ③ yield 最终态 — 预览优先用远程 URL（浏览器直接加载）
-    yield (
-        final_history,
-        "",
-        display_value,
-        info,
-        gr.update(interactive=has_image, value=download_path),
-        session.gallery,
-        gr.update(interactive=True),
-    )
+        error_history = history + [
+            {"role": "user", "content": message},
+            {"role": "assistant", "content": "❌ 生成异常，请重试"},
+        ]
+        yield (
+            error_history,
+            "",
+            gr.update(),
+            NO_PREVIEW,
+            gr.update(interactive=False),
+            session.gallery,
+            gr.update(interactive=True),
+        )
 
 
 def on_gallery_select(evt: gr.SelectData):

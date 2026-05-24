@@ -6,7 +6,6 @@ import warnings
 from datetime import datetime
 from http import HTTPStatus
 from pathlib import Path
-from urllib.request import urlretrieve
 
 import dashscope
 from langchain_classic.agents import AgentExecutor, create_tool_calling_agent
@@ -252,15 +251,43 @@ def _safe_filename(text: str, max_len: int = 24) -> str:
 
 
 def download_image(url: str, prompt: str = "asset") -> str | None:
-    """从远程 URL 下载图片到 output 目录，返回本地路径。"""
+    """从远程 URL 下载图片到 output 目录，返回本地路径。带重试机制。"""
+    import time as _time
+    import requests as _requests
+
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-    filename = f"{datetime.now():%Y%m%d_%H%M%S}_{_safe_filename(prompt)}.png"
+    safe_prompt = _safe_filename(prompt)[:30] if prompt else "asset"
+    filename = f"{datetime.now():%Y%m%d_%H%M%S}_{safe_prompt}.png"
     filepath = OUTPUT_DIR / filename
-    try:
-        urlretrieve(url, filepath)
-        return str(filepath.resolve())
-    except Exception:
-        return None
+
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
+        "Accept": "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8",
+        "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8",
+        "Referer": "https://dashscope.aliyuncs.com/",
+    }
+
+    last_error = None
+    for attempt in range(3):
+        try:
+            resp = _requests.get(url, timeout=30, headers=headers)
+            if resp.status_code == 403 and attempt < 2:
+                _time.sleep(1.5 * (attempt + 1))
+                continue
+            resp.raise_for_status()
+            filepath.write_bytes(resp.content)
+            if filepath.stat().st_size < 100:
+                filepath.unlink(missing_ok=True)
+                return None
+            return str(filepath.resolve())
+        except Exception as exc:
+            last_error = exc
+            if filepath.exists():
+                filepath.unlink(missing_ok=True)
+            if attempt < 2:
+                _time.sleep(1.5 * (attempt + 1))
+
+    return None
 
 
 def save_image_as(source_path: str | None, filename: str) -> str | None:
