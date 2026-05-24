@@ -1,0 +1,582 @@
+/* ============================================================
+   全局重置 & 暗黑基底
+   ============================================================ */
+body, html {
+    background: #020208 !important;
+    margin: 0; padding: 0;
+    overflow-x: hidden;
+}
+.gradio-container {
+    background: transparent !important;
+    min-height: 100vh;
+    max-width: 100% !important;
+    position: relative;
+}
+footer { display: none !important; }
+
+/* ============================================================
+   背景动效 ① — 超大幅极光波浪 (300% canvas, 大幅旋转+缩放)
+   ============================================================ */
+body::before {
+    content: '';
+    position: fixed;
+    top: -100%; left: -100%;
+    width: 300%; height: 300%;
+    z-index: 0;
+    pointer-events: none;
+    background:
+        conic-gradient(from 0deg at 25% 35%,
+            transparent 0%,
+            rgba(139,92,246,0.18) 12%, transparent 22%,
+            rgba(59,130,246,0.14) 32%, transparent 42%,
+            rgba(236,72,153,0.12) 52%, transparent 62%,
+            rgba(168,85,247,0.15) 72%, transparent 82%,
+            rgba(6,182,212,0.10) 90%, transparent 100%
+        );
+    animation: auroraSpin 18s linear infinite;
+}
+@keyframes auroraSpin {
+    0%   { transform: rotate(0deg) scale(1.00); }
+    20%  { transform: rotate(7deg) scale(1.12); }
+    40%  { transform: rotate(2deg) scale(1.20); }
+    60%  { transform: rotate(-6deg) scale(1.10); }
+    80%  { transform: rotate(-1deg) scale(1.16); }
+    100% { transform: rotate(0deg) scale(1.00); }
+}
+
+/* ============================================================
+   背景动效 ② — 四层渐变光幕（大幅飘移 + 倾斜变形）
+   ============================================================ */
+body::after {
+    content: '';
+    position: fixed;
+    top: -60%; left: -60%;
+    width: 220%; height: 220%;
+    z-index: 0; pointer-events: none;
+    background:
+        linear-gradient(125deg,
+            transparent 10%, rgba(88,28,135,0.20) 18%,
+            rgba(124,58,237,0.30) 26%, rgba(59,130,246,0.15) 34%,
+            transparent 42%
+        ),
+        linear-gradient(215deg,
+            transparent 22%, rgba(219,39,119,0.16) 32%,
+            rgba(168,85,247,0.26) 42%, rgba(6,182,212,0.14) 52%,
+            transparent 60%
+        ),
+        linear-gradient(160deg,
+            transparent 40%, rgba(99,102,241,0.18) 48%,
+            rgba(139,92,246,0.24) 56%, rgba(34,211,238,0.12) 64%,
+            transparent 72%
+        ),
+        linear-gradient(200deg,
+            transparent 55%, rgba(236,72,153,0.12) 60%,
+            rgba(124,58,237,0.20) 68%, rgba(59,130,246,0.10) 76%,
+            transparent 84%
+        );
+    animation: auroraDrift 14s ease-in-out infinite alternate;
+}
+@keyframes auroraDrift {
+    0%   { transform: translate(-8%, 5%) skewX(-4deg) skewY(2deg) scale(1.02); }
+    25%  { transform: translate(10%, -6%) skewX(3deg) skewY(-2deg) scale(1.06); }
+    50%  { transform: translate(-5%, 8%) skewX(-2deg) skewY(1.5deg) scale(1.10); }
+    75%  { transform: translate(7%, -3%) skewX(2.5deg) skewY(-1deg) scale(1.04); }
+    100% { transform: translate(3%, -1%) skewX(1deg) skewY(-0.5deg) scale(1.00); }
+}
+
+/* ============================================================
+   背景动效 ③ — 双光束旋转（大幅扫描）
+   ============================================================ */
+.gradio-container::before {
+    content: '';
+    position: fixed;
+    top: -10%; left: -10%;
+    width: 120%; height: 120%;
+    z-index: 0; pointer-events: none;
+    background:
+        conic-gradient(from 0deg at 50% -30%, transparent 68%, rgba(139,92,246,0.10) 70%, transparent 72%),
+        conic-gradient(from 120deg at 50% -30%, transparent 68%, rgba(59,130,246,0.08) 70%, transparent 72%),
+        conic-gradient(from 240deg at 50% -30%, transparent 68%, rgba(236,72,153,0.06) 70%, transparent 72%);
+    animation: beamSpin 24s linear infinite;
+}
+@keyframes beamSpin {
+    0%   { transform: rotate(0deg) scale(1); }
+    50%  { transform: rotate(180deg) scale(1.05); }
+    100% { transform: rotate(360deg) scale(1); }
+}
+
+/* ============================================================
+   背景动效 ④ — 60颗密集星空（大幅脉冲 + 随机闪烁）
+   ============================================================ */
+.gradio-container::after {
+    content: '';
+    position: fixed; inset: 0;
+    z-index: 0; pointer-events: none;
+    background:
+        radial-gradient(circle 2px at 2% 4%, rgba(255,255,255,0.95), transparent),
+        radial-gradient(circle 1.5px at 7% 13%, rgba(255,255,255,0.7), transparent),
+        radial-gradient(circle 2px at 12% 28%, rgba(210,185,255,0.65), transparent),
+        radial-gradient(circle 1px at 18% 8%, rgba(255,255,255,0.85), transparent),
+        radial-gradient(circle 1.8px at 24% 42%, rgba(255,255,255,0.6), transparent),
+        radial-gradient(circle 1px at 30% 3%, rgba(225,205,255,0.9), transparent),
+        radial-gradient(circle 2.5px at 36% 24%, rgba(255,255,255,0.5), transparent),
+        radial-gradient(circle 1px at 42% 50%, rgba(255,255,255,0.75), transparent),
+        radial-gradient(circle 2px at 48% 12%, rgba(210,195,255,0.65), transparent),
+        radial-gradient(circle 1.2px at 54% 33%, rgba(255,255,255,0.6), transparent),
+        radial-gradient(circle 2px at 60% 6%, rgba(235,215,255,0.8), transparent),
+        radial-gradient(circle 1px at 66% 40%, rgba(255,255,255,0.6), transparent),
+        radial-gradient(circle 2.2px at 72% 18%, rgba(255,255,255,0.45), transparent),
+        radial-gradient(circle 1px at 78% 47%, rgba(215,198,255,0.7), transparent),
+        radial-gradient(circle 1.8px at 84% 11%, rgba(255,255,255,0.75), transparent),
+        radial-gradient(circle 1px at 90% 35%, rgba(255,255,255,0.6), transparent),
+        radial-gradient(circle 2px at 95% 56%, rgba(230,210,255,0.65), transparent),
+        radial-gradient(circle 1px at 5% 57%, rgba(255,255,255,0.6), transparent),
+        radial-gradient(circle 1.8px at 14% 72%, rgba(220,198,255,0.55), transparent),
+        radial-gradient(circle 1px at 21% 82%, rgba(255,255,255,0.75), transparent),
+        radial-gradient(circle 2px at 28% 65%, rgba(255,255,255,0.5), transparent),
+        radial-gradient(circle 1px at 35% 88%, rgba(240,220,255,0.7), transparent),
+        radial-gradient(circle 2px at 43% 75%, rgba(255,255,255,0.6), transparent),
+        radial-gradient(circle 2.5px at 50% 94%, rgba(255,255,255,0.45), transparent),
+        radial-gradient(circle 1px at 57% 80%, rgba(222,202,255,0.65), transparent),
+        radial-gradient(circle 1.8px at 64% 92%, rgba(255,255,255,0.65), transparent),
+        radial-gradient(circle 1px at 71% 68%, rgba(255,255,255,0.6), transparent),
+        radial-gradient(circle 2px at 78% 85%, rgba(232,212,255,0.55), transparent),
+        radial-gradient(circle 1px at 86% 70%, rgba(255,255,255,0.72), transparent),
+        radial-gradient(circle 1.8px at 93% 91%, rgba(255,255,255,0.55), transparent),
+        radial-gradient(circle 1.5px at 8% 92%, rgba(255,255,255,0.55), transparent),
+        radial-gradient(circle 2px at 17% 36%, rgba(200,170,255,0.5), transparent),
+        radial-gradient(circle 1px at 26% 54%, rgba(255,255,255,0.58), transparent),
+        radial-gradient(circle 2.2px at 33% 71%, rgba(255,255,255,0.42), transparent),
+        radial-gradient(circle 1px at 40% 16%, rgba(240,218,255,0.68), transparent),
+        radial-gradient(circle 1.8px at 47% 60%, rgba(255,255,255,0.55), transparent),
+        radial-gradient(circle 1px at 53% 84%, rgba(218,195,255,0.62), transparent),
+        radial-gradient(circle 2.5px at 59% 52%, rgba(255,255,255,0.38), transparent),
+        radial-gradient(circle 1px at 65% 22%, rgba(255,255,255,0.72), transparent),
+        radial-gradient(circle 1.6px at 70% 77%, rgba(225,205,255,0.55), transparent),
+        radial-gradient(circle 1px at 76% 40%, rgba(255,255,255,0.6), transparent),
+        radial-gradient(circle 2px at 82% 64%, rgba(235,215,255,0.52), transparent),
+        radial-gradient(circle 1px at 88% 28%, rgba(255,255,255,0.7), transparent),
+        radial-gradient(circle 1.8px at 94% 48%, rgba(255,255,255,0.55), transparent),
+        radial-gradient(circle 1px at 10% 72%, rgba(210,190,255,0.6), transparent),
+        radial-gradient(circle 2px at 20% 18%, rgba(255,255,255,0.48), transparent),
+        radial-gradient(circle 1px at 31% 46%, rgba(230,210,255,0.65), transparent),
+        radial-gradient(circle 1.8px at 39% 82%, rgba(255,255,255,0.55), transparent),
+        radial-gradient(circle 1px at 49% 30%, rgba(255,255,255,0.7), transparent),
+        radial-gradient(circle 2px at 56% 16%, rgba(218,198,255,0.55), transparent),
+        radial-gradient(circle 1px at 62% 68%, rgba(255,255,255,0.6), transparent),
+        radial-gradient(circle 2.2px at 69% 46%, rgba(255,255,255,0.42), transparent),
+        radial-gradient(circle 1px at 74% 92%, rgba(240,220,255,0.68), transparent),
+        radial-gradient(circle 1.8px at 81% 22%, rgba(255,255,255,0.7), transparent),
+        radial-gradient(circle 1px at 87% 58%, rgba(222,202,255,0.58), transparent),
+        radial-gradient(circle 2px at 92% 14%, rgba(255,255,255,0.5), transparent),
+        radial-gradient(circle 1px at 98% 76%, rgba(228,208,255,0.62), transparent),
+        radial-gradient(circle 1.5px at 2% 88%, rgba(255,255,255,0.58), transparent),
+        radial-gradient(circle 2px at 15% 56%, rgba(205,185,255,0.5), transparent),
+        radial-gradient(circle 1px at 22% 32%, rgba(255,255,255,0.72), transparent);
+    animation: starField 6s ease-in-out infinite alternate;
+}
+@keyframes starField {
+    0%   { opacity: 0.20; transform: scale(0.98); }
+    30%  { opacity: 0.65; transform: scale(1.01); }
+    60%  { opacity: 0.35; transform: scale(1.03); }
+    100% { opacity: 0.80; transform: scale(1.00); }
+}
+
+/* ============================================================
+   背景动效 ⑤ — 网格/噪点纹理叠加（微动）
+   ============================================================ */
+#bg-particles {
+    position: fixed; inset: 0;
+    z-index: 0; pointer-events: none; overflow: hidden;
+}
+#bg-particles::before {
+    content: '';
+    position: absolute; inset: 0;
+    background-image:
+        repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(255,255,255,0.008) 2px, rgba(255,255,255,0.008) 4px),
+        repeating-linear-gradient(90deg, transparent, transparent 2px, rgba(255,255,255,0.008) 2px, rgba(255,255,255,0.008) 4px);
+    animation: gridShift 20s linear infinite;
+}
+@keyframes gridShift {
+    0%   { transform: translate(0, 0); }
+    100% { transform: translate(4px, 4px); }
+}
+
+/* ============================================================
+   背景动效 ⑥ — 悬浮光球粒子（大范围漂移）
+   ============================================================ */
+#bg-particles .p {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(2px);
+    animation: particleFloat 12s ease-in-out infinite;
+}
+#bg-particles .p:nth-child(1)  { width:8px; height:8px; background:rgba(139,92,246,0.55); left:5%;  top:10%; animation-delay:0s; box-shadow:0 0 20px rgba(139,92,246,0.5),0 0 40px rgba(139,92,246,0.2); }
+#bg-particles .p:nth-child(2)  { width:6px; height:6px; background:rgba(59,130,246,0.45);left:75%; top:18%; animation-delay:-2s; box-shadow:0 0 16px rgba(59,130,246,0.45),0 0 32px rgba(59,130,246,0.18); }
+#bg-particles .p:nth-child(3)  { width:10px;height:10px;background:rgba(236,72,153,0.40);left:40%; top:65%; animation-delay:-5s; box-shadow:0 0 24px rgba(236,72,153,0.4),0 0 48px rgba(236,72,153,0.15); }
+#bg-particles .p:nth-child(4)  { width:7px; height:7px; background:rgba(6,182,212,0.50);left:68%; top:55%; animation-delay:-1s; box-shadow:0 0 18px rgba(6,182,212,0.5),0 0 36px rgba(6,182,212,0.2); }
+#bg-particles .p:nth-child(5)  { width:9px; height:9px; background:rgba(168,85,247,0.42);left:18%; top:75%; animation-delay:-7s; box-shadow:0 0 22px rgba(168,85,247,0.42),0 0 44px rgba(168,85,247,0.15); }
+#bg-particles .p:nth-child(6)  { width:5px; height:5px; background:rgba(99,102,241,0.55);left:85%; top:5%;  animation-delay:-3s; box-shadow:0 0 14px rgba(99,102,241,0.5),0 0 28px rgba(99,102,241,0.2); }
+#bg-particles .p:nth-child(7)  { width:8px; height:8px; background:rgba(139,92,246,0.38);left:48%; top:28%; animation-delay:-9s; box-shadow:0 0 20px rgba(139,92,246,0.38),0 0 40px rgba(139,92,246,0.14); }
+#bg-particles .p:nth-child(8)  { width:6px; height:6px; background:rgba(59,130,246,0.48);left:12%; top:44%; animation-delay:-4s; box-shadow:0 0 16px rgba(59,130,246,0.48),0 0 32px rgba(59,130,246,0.18); }
+
+@keyframes particleFloat {
+    0%   { transform: translate(0, 0) scale(0.4); opacity: 0.10; }
+    15%  { transform: translate(60px, -80px) scale(1.5); opacity: 0.95; }
+    35%  { transform: translate(-40px, -30px) scale(1.8); opacity: 0.70; }
+    55%  { transform: translate(80px, 20px) scale(1.2); opacity: 0.85; }
+    75%  { transform: translate(-50px, -60px) scale(1.6); opacity: 0.50; }
+    100% { transform: translate(30px, -45px) scale(0.8); opacity: 0.25; }
+}
+
+/* 面板在动效之上 */
+.gradio-container > * { position: relative; z-index: 1; }
+
+/* ============================================================
+   标题 — 虹彩渐变 + 呼吸光晕
+   ============================================================ */
+#main-title {
+    text-align: center;
+    background: linear-gradient(90deg, #00d2ff, #7b2ff7, #f107a3, #7b2ff7);
+    background-size: 200% 100%;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    font-size: 2.2rem !important;
+    font-weight: 800 !important;
+    margin-bottom: 2px !important;
+    letter-spacing: 2px !important;
+    animation: titleGlow 3s ease-in-out infinite alternate, titleGradient 4s linear infinite;
+}
+@keyframes titleGlow {
+    0%   { filter: drop-shadow(0 0 20px rgba(123,47,247,0.4)); }
+    100% { filter: drop-shadow(0 0 40px rgba(0,210,255,0.6)); }
+}
+@keyframes titleGradient {
+    0%   { background-position: 0% 50%; }
+    100% { background-position: 200% 50%; }
+}
+#subtitle {
+    text-align: center;
+    color: #6b7fa8 !important;
+    margin-top: 0 !important;
+    font-size: 0.9rem !important;
+    letter-spacing: 1px !important;
+}
+
+/* ============================================================
+   玻璃拟态面板 — 深度磨砂
+   ============================================================ */
+.chat-panel, .preview-panel {
+    background: rgba(255,255,255,0.022) !important;
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border: 1px solid rgba(255,255,255,0.06) !important;
+    border-radius: 18px !important;
+    padding: 20px !important;
+    position: relative;
+    z-index: 2;
+    overflow: visible !important;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.02) !important;
+    transition: border-color 0.5s ease, box-shadow 0.5s ease !important;
+}
+.chat-panel:hover, .preview-panel:hover {
+    border-color: rgba(255,255,255,0.14) !important;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.45), 0 0 60px rgba(100,50,200,0.10), inset 0 1px 0 rgba(255,255,255,0.04) !important;
+}
+
+/* 设置行 — 最高 z-index，实色底防下拉被裁 */
+.settings-row {
+    background: rgba(8, 8, 24, 0.96) !important;
+    border: 1px solid rgba(255,255,255,0.07) !important;
+    border-radius: 16px !important;
+    padding: 14px 20px !important;
+    position: relative;
+    z-index: 10 !important;
+    overflow: visible !important;
+    margin-bottom: 14px !important;
+    align-items: end !important;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.4), 0 0 40px rgba(80,30,180,0.05) !important;
+}
+.settings-row:hover {
+    border-color: rgba(255,255,255,0.13) !important;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.4), 0 0 60px rgba(100,50,200,0.08) !important;
+}
+
+/* ============================================================
+   面板标题 — 渐变色
+   ============================================================ */
+.preview-panel h3, .chat-panel h3, .settings-row h3 {
+    background: linear-gradient(90deg, #a78bfa, #60a5fa);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    font-weight: 700 !important;
+    letter-spacing: 0.5px !important;
+    font-size: 0.95rem !important;
+    margin-bottom: 10px !important;
+}
+
+/* ============================================================
+   下拉框 — 最高层级，不被裁切
+   ============================================================ */
+.gr-dropdown {
+    position: relative !important;
+    z-index: 100000 !important;
+}
+.gr-dropdown [class*="select-wrap"],
+.gr-dropdown [class*="wrap"] {
+    overflow: visible !important;
+    position: relative !important;
+    z-index: 100000 !important;
+}
+.gr-dropdown ul,
+.gr-dropdown [class*="dropdown"],
+.gr-dropdown [class*="select"] ul,
+.gr-dropdown [class*="options"],
+.gr-dropdown [class*="listbox"],
+.gr-dropdown [role="listbox"],
+.gr-dropdown [class*="popup"] {
+    background: #0f0f24 !important;
+    border: 1px solid rgba(255,255,255,0.14) !important;
+    border-radius: 12px !important;
+    z-index: 2147483647 !important;
+    position: absolute !important;
+    overflow: visible !important;
+    box-shadow: 0 20px 56px rgba(0,0,0,0.75), 0 0 1px rgba(255,255,255,0.08) !important;
+}
+.gr-dropdown li,
+.gr-dropdown [class*="option"],
+.gr-dropdown [class*="item"] {
+    color: #cbd5e1 !important;
+    border-radius: 8px !important;
+    padding: 8px 14px !important;
+}
+.gr-dropdown li:hover,
+.gr-dropdown [class*="option"]:hover,
+.gr-dropdown [class*="item"]:hover,
+.gr-dropdown [class*="selected"] {
+    background: rgba(139,92,246,0.22) !important;
+    color: #e2e8f0 !important;
+}
+
+.gr-dropdown label, .gr-textbox label, .gr-number label,
+label, .gr-input-label {
+    color: #a5b4fc !important;
+    font-size: 0.82rem !important;
+    font-weight: 500 !important;
+}
+
+/* ============================================================
+   图片预览窗口 — 发光边框
+   ============================================================ */
+#preview-window {
+    border: 2px solid rgba(120,80,220,0.3) !important;
+    border-radius: 16px !important;
+    background: rgba(0,0,0,0.42) !important;
+    min-height: 340px !important;
+    box-shadow: 0 0 40px rgba(100,50,200,0.12), inset 0 0 80px rgba(100,50,200,0.05) !important;
+    transition: border-color 0.4s ease, box-shadow 0.4s ease !important;
+}
+#preview-window:hover {
+    border-color: rgba(120,80,220,0.55) !important;
+    box-shadow: 0 0 55px rgba(100,50,200,0.20), inset 0 0 80px rgba(100,50,200,0.08) !important;
+}
+
+/* ============================================================
+   滚动条 — 渐变炫彩
+   ============================================================ */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+    background: linear-gradient(180deg, rgba(139,92,246,0.5), rgba(59,130,246,0.4));
+    border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(180deg, rgba(139,92,246,0.8), rgba(59,130,246,0.6));
+}
+* { scrollbar-width: thin; scrollbar-color: rgba(139,92,246,0.45) transparent; }
+
+/* ============================================================
+   聊天消息 — 圆角气泡
+   ============================================================ */
+.chatbot .user { font-size: 15px !important; line-height: 1.65 !important; }
+.chatbot .bot  { font-size: 15px !important; line-height: 1.65 !important; }
+.chatbot .message {
+    padding: 12px 18px !important;
+    border-radius: 14px !important;
+    margin: 6px 0 !important;
+    max-width: 90% !important;
+    animation: msgIn 0.35s ease-out;
+}
+@keyframes msgIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+.chatbot .user .message-wrap {
+    border: 1px solid rgba(139,92,246,0.18) !important;
+    border-radius: 14px !important;
+}
+.chatbot .bot .message-wrap {
+    border: 1px solid rgba(6,182,212,0.14) !important;
+    border-radius: 14px !important;
+}
+.chatbot { overflow-y: auto !important; scroll-behavior: smooth !important; }
+.chatbot .messages { overflow-y: auto !important; }
+.chatbot .empty-state, .chatbot .placeholder {
+    color: #6b7fa8 !important; font-size: 14px !important;
+    text-align: center !important; padding: 40px 20px !important; opacity: 0.7 !important;
+}
+
+/* ============================================================
+   加载动画 — 跳动圆点
+   ============================================================ */
+.loading-dots { display: inline-flex !important; gap: 7px !important; margin-top: 6px !important; }
+.loading-dots span {
+    display: inline-block; width: 9px; height: 9px;
+    border-radius: 50%; background: #8b5cf6;
+    animation: dotBounce 1.2s ease-in-out infinite both;
+    box-shadow: 0 0 8px rgba(139,92,246,0.5);
+}
+.loading-dots span:nth-child(1) { animation-delay: 0s; }
+.loading-dots span:nth-child(2) { animation-delay: 0.15s; }
+.loading-dots span:nth-child(3) { animation-delay: 0.30s; }
+@keyframes dotBounce {
+    0%, 80%, 100% { transform: scale(0.4); opacity: 0.3; }
+    40% { transform: scale(1.1); opacity: 1; }
+}
+
+/* ============================================================
+   输入框
+   ============================================================ */
+input, textarea, select,
+.gr-textbox input, .gr-textbox textarea,
+.gr-dropdown, .gr-textbox, .gr-number {
+    background: rgba(255,255,255,0.035) !important;
+    color: #e2e8f0 !important;
+    border: 1px solid rgba(255,255,255,0.08) !important;
+    border-radius: 12px !important;
+    transition: border-color 0.25s ease, box-shadow 0.25s ease !important;
+}
+input:focus, textarea:focus, select:focus,
+.gr-textbox input:focus, .gr-textbox textarea:focus,
+.gr-dropdown:focus-within {
+    border-color: rgba(139,92,246,0.45) !important;
+    box-shadow: 0 0 18px rgba(139,92,246,0.12) !important;
+    outline: none !important;
+}
+input::placeholder, textarea::placeholder { color: rgba(255,255,255,0.18) !important; }
+#chat-input textarea {
+    font-size: 15px !important; line-height: 1.55 !important;
+    padding: 14px 18px !important; min-height: 68px !important;
+}
+
+/* ============================================================
+   按钮
+   ============================================================ */
+button, .gr-button {
+    transition: all 0.25s ease !important;
+    border-radius: 12px !important;
+    font-weight: 500 !important;
+    cursor: pointer !important;
+}
+
+/* 主按钮 — 渐变紫 */
+.gr-button-primary {
+    background: linear-gradient(135deg, #8b5cf6, #6366f1) !important;
+    border: none !important;
+    box-shadow: 0 2px 14px rgba(139,92,246,0.35) !important;
+    font-weight: 600 !important; color: #fff !important;
+}
+.gr-button-primary:hover {
+    box-shadow: 0 4px 22px rgba(139,92,246,0.55) !important;
+    filter: brightness(1.10);
+    transform: translateY(-1px);
+}
+.gr-button-primary:active {
+    transform: translateY(0);
+}
+.gr-button-primary:disabled, .gr-button-primary[disabled] {
+    background: linear-gradient(135deg, #2e1658, #1e1842) !important;
+    opacity: 0.45 !important; cursor: not-allowed !important; box-shadow: none !important;
+}
+#send-btn-wrap button {
+    animation: btnPulse 3s ease-in-out infinite;
+    padding: 12px 32px !important; font-size: 15px !important;
+}
+@keyframes btnPulse {
+    0%, 100% { box-shadow: 0 2px 14px rgba(139,92,246,0.35); }
+    50%      { box-shadow: 0 2px 28px rgba(139,92,246,0.65); }
+}
+
+/* 次要按钮 */
+.gr-button-secondary {
+    background: rgba(255,255,255,0.04) !important;
+    border: 1px solid rgba(255,255,255,0.08) !important;
+    color: #a5b4fc !important;
+}
+.gr-button-secondary:hover {
+    background: rgba(139,92,246,0.12) !important;
+    border-color: rgba(139,92,246,0.28) !important;
+    color: #c7d2fe !important;
+}
+button.size-sm, .gr-button-sm {
+    border-radius: 10px !important; cursor: pointer !important;
+    transition: all 0.2s ease !important;
+}
+button.size-sm:hover, .gr-button-sm:hover {
+    background: rgba(139,92,246,0.12) !important;
+    border-color: rgba(139,92,246,0.22) !important;
+    transform: translateY(-1px);
+}
+
+/* 下载按钮 — 绿色渐变 */
+.gr-download-button {
+    background: linear-gradient(135deg, #059669, #047857) !important;
+    border: none !important; color: #fff !important;
+    box-shadow: 0 2px 12px rgba(5,150,105,0.3) !important;
+}
+.gr-download-button:hover {
+    box-shadow: 0 4px 20px rgba(5,150,105,0.5) !important;
+    filter: brightness(1.10);
+    transform: translateY(-1px);
+}
+.gr-download-button:disabled {
+    background: linear-gradient(135deg, #1a4a2a, #102818) !important;
+    opacity: 0.4 !important; cursor: not-allowed !important; box-shadow: none !important;
+}
+
+/* ============================================================
+   Gallery / Markdown
+   ============================================================ */
+.gr-gallery {
+    border-radius: 14px !important; background: rgba(0,0,0,0.28) !important;
+    border: 1px solid rgba(255,255,255,0.05) !important;
+}
+.prose, .markdown { color: #cbd5e1 !important; }
+.prose strong, .markdown strong { color: #e2e8f0 !important; }
+
+/* ============================================================
+   布局
+   ============================================================ */
+.main-row { align-items: stretch !important; }
+.main-row > div { display: flex !important; flex-direction: column !important; }
+.preview-panel > * + * { margin-top: 14px !important; }
+.preview-panel > *:first-child { margin-top: 4px !important; }
+.preview-panel .markdown, .preview-panel .preview-info {
+    padding-top: 8px !important;
+}
+#preview-info-area {
+    margin-top: 12px !important;
+    padding: 12px 14px !important;
+}
+.chat-panel > * + * { margin-top: 10px !important; }
+.chat-footer-area {
+    flex: 1 !important; display: flex !important;
+    align-items: flex-end !important; justify-content: center !important;
+    padding: 10px !important; color: #4a5568 !important;
+    font-size: 0.78rem !important; text-align: center !important; opacity: 0.4 !important;
+}
+.section-label {
+    color: #6366f1 !important; font-size: 0.72rem !important;
+    font-weight: 600 !important; letter-spacing: 1px !important;
+    text-transform: uppercase !important; opacity: 0.7 !important; margin-bottom: 4px !important;
+}
