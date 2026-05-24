@@ -196,9 +196,10 @@ body::after {
     -webkit-backdrop-filter: blur(16px);
 }
 
-/* 设置行 — 不能有 backdrop-filter（会困住下拉框），用深色半透明代替 */
+/* 设置行 — 不能有 backdrop-filter（会困住下拉框），用深色半透明代替，z-index 高于其他面板 */
 .settings-row {
     background: rgba(12, 12, 30, 0.92) !important;
+    z-index: 10 !important;
     margin-bottom: 12px !important;
     align-items: end !important;
     padding: 12px 18px !important;
@@ -504,7 +505,14 @@ button.size-sm:active, .gr-button-sm:active {
     flex-direction: column !important;
 }
 .preview-panel > * + * { margin-top: 12px !important; }
+.preview-panel > *:first-child { margin-top: 4px !important; }
 .chat-panel > * + *    { margin-top: 10px !important; }
+
+/* 预览信息文字离上方 Image 保持舒适间距 */
+#preview-window + .markdown {
+    padding-top: 8px !important;
+    margin-top: 6px !important;
+}
 
 /* 底部填充区 */
 .chat-footer-area {

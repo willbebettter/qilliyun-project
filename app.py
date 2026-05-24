@@ -108,7 +108,7 @@ def respond_generator(message, history):
     yield (
         loading_history,
         "",
-        None,
+        gr.update(),                   # preview 保持原样不闪
         NO_PREVIEW,
         gr.update(interactive=False),
         session.gallery,
@@ -137,7 +137,7 @@ def respond_generator(message, history):
     yield (
         final_history,
         "",
-        preview_path,
+        gr.update(value=preview_path),
         info,
         gr.update(interactive=has_image, value=download_path),
         session.gallery,
@@ -241,7 +241,7 @@ def build_ui():
                     label="📦 素材分类",
                 )
             with gr.Column(scale=2):
-                gr.Markdown("⚡ **快速生成**", elem_classes="section-label")
+                gr.Markdown("⚡ **快捷提示词**", elem_classes="section-label")
                 with gr.Row():
                     ex_btn1 = gr.Button("⚔️ 战士", size="sm", variant="secondary")
                     ex_btn2 = gr.Button("🧪 药水", size="sm", variant="secondary")
