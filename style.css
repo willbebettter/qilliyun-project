@@ -2,8 +2,9 @@
    全局重置 & 暗黑基底
    ============================================================ */
 body, html {
-    background: #050510 !important;
+    background: #030308 !important;
     margin: 0; padding: 0;
+    overflow-x: hidden;
 }
 .gradio-container {
     background: transparent !important;
@@ -14,92 +15,134 @@ body, html {
 footer { display: none !important; }
 
 /* ============================================================
-   背景动效 ① — 旋转锥形渐变（200%画布，永不露边）
+   背景动效 ① — 极光波浪（多层渐变带，永不露边）
    ============================================================ */
 body::before {
     content: '';
     position: fixed;
-    top: -50%; left: -50%;
-    width: 200%; height: 200%;
+    top: -40%; left: -40%;
+    width: 180%; height: 180%;
     z-index: 0;
     pointer-events: none;
-    background: conic-gradient(
-        from 0deg at 50% 50%,
-        rgba(110,40,210,0.14),
-        rgba(20,110,240,0.10),
-        rgba(25,195,150,0.06),
-        rgba(210,30,110,0.09),
-        rgba(139,92,246,0.12),
-        rgba(59,130,246,0.08),
-        rgba(110,40,210,0.14)
-    );
-    animation: rotateBg 40s linear infinite;
+    background:
+        linear-gradient(170deg,
+            transparent 20%,
+            rgba(88,28,135,0.12) 25%,
+            rgba(124,58,237,0.18) 32%,
+            rgba(59,130,246,0.10) 40%,
+            transparent 48%
+        ),
+        linear-gradient(200deg,
+            transparent 35%,
+            rgba(219,39,119,0.08) 42%,
+            rgba(139,92,246,0.15) 50%,
+            rgba(6,182,212,0.08) 58%,
+            transparent 65%
+        ),
+        linear-gradient(155deg,
+            transparent 50%,
+            rgba(99,102,241,0.09) 56%,
+            rgba(168,85,247,0.12) 64%,
+            rgba(34,211,238,0.06) 72%,
+            transparent 80%
+        );
+    animation: auroraWave 18s ease-in-out infinite alternate;
 }
-@keyframes rotateBg {
-    from { transform: rotate(0deg); }
-    to   { transform: rotate(360deg); }
+@keyframes auroraWave {
+    0%   { transform: translate(-3%, 1%) skewX(-1deg); }
+    33%  { transform: translate(3%, -2%) skewX(1deg); }
+    66%  { transform: translate(-2%, 2%) skewX(-0.5deg); }
+    100% { transform: translate(2%, -1%) skewX(0.5deg); }
 }
 
 /* ============================================================
-   背景动效 ② — 流动斜条纹
+   背景动效 ② — 光束射线（旋转+脉冲）
    ============================================================ */
 body::after {
     content: '';
     position: fixed; inset: 0;
     z-index: 0; pointer-events: none;
-    background-image: repeating-linear-gradient(
-        -45deg,
-        transparent,
-        transparent 50px,
-        rgba(255,255,255,0.007) 50px,
-        rgba(255,255,255,0.007) 100px
-    );
-    animation: stripeMove 25s linear infinite;
+    background:
+        conic-gradient(from 25deg at 15% 20%, transparent 40%, rgba(139,92,246,0.04) 42%, transparent 44%),
+        conic-gradient(from 160deg at 82% 30%, transparent 45%, rgba(59,130,246,0.03) 47%, transparent 49%),
+        conic-gradient(from 280deg at 60% 75%, transparent 50%, rgba(236,72,153,0.03) 52%, transparent 54%);
+    animation: beamRotate 60s linear infinite;
 }
-@keyframes stripeMove {
-    from { background-position: 0 0; }
-    to   { background-position: 141px 141px; }
+@keyframes beamRotate {
+    from { transform: rotate(0deg); }
+    to   { transform: rotate(360deg); }
 }
 
 /* ============================================================
-   背景动效 ③ — 星空粒子闪烁
+   背景动效 ③ — 密集星空粒子（独立闪烁）
    ============================================================ */
 .gradio-container::before {
     content: '';
     position: fixed; inset: 0;
     z-index: 0; pointer-events: none;
     background:
-        radial-gradient(1.5px 1.5px at 3% 7%, rgba(255,255,255,0.85), transparent),
-        radial-gradient(1px 1px at 9% 18%, rgba(255,255,255,0.65), transparent),
-        radial-gradient(1.5px 1.5px at 15% 33%, rgba(255,255,255,0.55), transparent),
-        radial-gradient(1px 1px at 22% 12%, rgba(255,255,255,0.75), transparent),
-        radial-gradient(1.5px 1.5px at 28% 48%, rgba(255,255,255,0.5), transparent),
-        radial-gradient(1px 1px at 34% 5%, rgba(255,255,255,0.8), transparent),
-        radial-gradient(2px 2px at 41% 28%, rgba(255,255,255,0.45), transparent),
-        radial-gradient(1px 1px at 48% 55%, rgba(255,255,255,0.7), transparent),
-        radial-gradient(1.5px 1.5px at 53% 16%, rgba(255,255,255,0.6), transparent),
-        radial-gradient(1px 1px at 60% 38%, rgba(255,255,255,0.5), transparent),
-        radial-gradient(1.5px 1.5px at 67% 9%, rgba(255,255,255,0.75), transparent),
-        radial-gradient(1px 1px at 73% 44%, rgba(255,255,255,0.55), transparent),
-        radial-gradient(2px 2px at 80% 22%, rgba(255,255,255,0.4), transparent),
-        radial-gradient(1px 1px at 87% 52%, rgba(255,255,255,0.65), transparent),
-        radial-gradient(1.5px 1.5px at 92% 15%, rgba(255,255,255,0.7), transparent),
-        radial-gradient(1px 1px at 7% 62%, rgba(255,255,255,0.55), transparent),
-        radial-gradient(1.5px 1.5px at 17% 78%, rgba(255,255,255,0.5), transparent),
-        radial-gradient(1px 1px at 26% 87%, rgba(255,255,255,0.7), transparent),
-        radial-gradient(1.5px 1.5px at 38% 68%, rgba(255,255,255,0.45), transparent),
-        radial-gradient(1px 1px at 46% 92%, rgba(255,255,255,0.65), transparent),
-        radial-gradient(2px 2px at 57% 73%, rgba(255,255,255,0.4), transparent),
-        radial-gradient(1px 1px at 64% 85%, rgba(255,255,255,0.6), transparent),
-        radial-gradient(1.5px 1.5px at 72% 63%, rgba(255,255,255,0.55), transparent),
-        radial-gradient(1px 1px at 81% 80%, rgba(255,255,255,0.7), transparent),
-        radial-gradient(1.5px 1.5px at 89% 34%, rgba(255,255,255,0.5), transparent),
-        radial-gradient(1px 1px at 95% 70%, rgba(255,255,255,0.6), transparent);
-    animation: starTwinkle 5s ease-in-out infinite alternate;
+        radial-gradient(circle 1.5px at 2% 4%, rgba(255,255,255,0.9), transparent),
+        radial-gradient(circle 1px at 8% 14%, rgba(255,255,255,0.6), transparent),
+        radial-gradient(circle 1.8px at 13% 29%, rgba(200,180,255,0.55), transparent),
+        radial-gradient(circle 1px at 19% 9%, rgba(255,255,255,0.75), transparent),
+        radial-gradient(circle 1.4px at 25% 43%, rgba(255,255,255,0.5), transparent),
+        radial-gradient(circle 1px at 31% 3%, rgba(220,200,255,0.8), transparent),
+        radial-gradient(circle 2px at 37% 25%, rgba(255,255,255,0.4), transparent),
+        radial-gradient(circle 1px at 43% 51%, rgba(255,255,255,0.65), transparent),
+        radial-gradient(circle 1.6px at 49% 13%, rgba(200,190,255,0.55), transparent),
+        radial-gradient(circle 1px at 55% 34%, rgba(255,255,255,0.5), transparent),
+        radial-gradient(circle 1.8px at 61% 6%, rgba(230,210,255,0.7), transparent),
+        radial-gradient(circle 1px at 67% 41%, rgba(255,255,255,0.5), transparent),
+        radial-gradient(circle 2px at 73% 19%, rgba(255,255,255,0.38), transparent),
+        radial-gradient(circle 1px at 79% 48%, rgba(210,195,255,0.6), transparent),
+        radial-gradient(circle 1.5px at 85% 12%, rgba(255,255,255,0.68), transparent),
+        radial-gradient(circle 1px at 91% 36%, rgba(255,255,255,0.5), transparent),
+        radial-gradient(circle 1.7px at 96% 57%, rgba(225,205,255,0.55), transparent),
+        radial-gradient(circle 1px at 5% 58%, rgba(255,255,255,0.5), transparent),
+        radial-gradient(circle 1.4px at 15% 73%, rgba(215,195,255,0.48), transparent),
+        radial-gradient(circle 1px at 22% 83%, rgba(255,255,255,0.65), transparent),
+        radial-gradient(circle 1.8px at 29% 66%, rgba(255,255,255,0.42), transparent),
+        radial-gradient(circle 1px at 36% 89%, rgba(240,220,255,0.6), transparent),
+        radial-gradient(circle 1.5px at 44% 76%, rgba(255,255,255,0.5), transparent),
+        radial-gradient(circle 2px at 51% 95%, rgba(255,255,255,0.38), transparent),
+        radial-gradient(circle 1px at 58% 81%, rgba(218,198,255,0.55), transparent),
+        radial-gradient(circle 1.4px at 65% 93%, rgba(255,255,255,0.58), transparent),
+        radial-gradient(circle 1px at 72% 69%, rgba(255,255,255,0.5), transparent),
+        radial-gradient(circle 1.7px at 79% 86%, rgba(228,208,255,0.45), transparent),
+        radial-gradient(circle 1px at 87% 71%, rgba(255,255,255,0.62), transparent),
+        radial-gradient(circle 1.5px at 94% 92%, rgba(255,255,255,0.48), transparent);
+    animation: starField 6s ease-in-out infinite alternate;
 }
-@keyframes starTwinkle {
-    0%   { opacity: 0.35; }
-    100% { opacity: 0.9; }
+@keyframes starField {
+    0%   { opacity: 0.3; }
+    100% { opacity: 0.95; }
+}
+
+/* ============================================================
+   背景动效 ④ — 漂浮发光粒子
+   ============================================================ */
+#bg-particles {
+    position: fixed; inset: 0;
+    z-index: 0; pointer-events: none; overflow: hidden;
+}
+#bg-particles .p {
+    position: absolute;
+    border-radius: 50%;
+    animation: particleFloat var(--dur) ease-in-out infinite alternate;
+    animation-delay: var(--del);
+}
+#bg-particles .p:nth-child(1)  { width:4px;height:4px;background:rgba(139,92,246,0.25);left:10%;top:15%;--dur:12s;--del:0s; }
+#bg-particles .p:nth-child(2)  { width:3px;height:3px;background:rgba(59,130,246,0.2); left:80%;top:25%;--dur:15s;--del:-3s;}
+#bg-particles .p:nth-child(3)  { width:5px;height:5px;background:rgba(236,72,153,0.15);left:45%;top:70%;--dur:18s;--del:-6s;}
+#bg-particles .p:nth-child(4)  { width:3px;height:3px;background:rgba(6,182,212,0.22);left:70%;top:60%;--dur:14s;--del:-2s;}
+#bg-particles .p:nth-child(5)  { width:4px;height:4px;background:rgba(168,85,247,0.18);left:25%;top:80%;--dur:16s;--del:-8s;}
+#bg-particles .p:nth-child(6)  { width:2px;height:2px;background:rgba(99,102,241,0.25);left:90%;top:8%; --dur:11s;--del:-4s;}
+#bg-particles .p:nth-child(7)  { width:4px;height:4px;background:rgba(139,92,246,0.16);left:55%;top:35%;--dur:20s;--del:-10s;}
+#bg-particles .p:nth-child(8)  { width:3px;height:3px;background:rgba(59,130,246,0.2); left:15%;top:50%;--dur:13s;--del:-5s;}
+@keyframes particleFloat {
+    0%   { transform: translate(0, 0) scale(1); opacity: 0.3; }
+    50%  { opacity: 0.8; }
+    100% { transform: translate(var(--tx, 30px), var(--ty, -40px)) scale(1.5); opacity: 0.2; }
 }
 
 /* 面板在动效之上 */
@@ -113,7 +156,7 @@ body::after {
     background: linear-gradient(90deg, #00d2ff, #7b2ff7, #f107a3);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
-    font-size: 2.4rem !important;
+    font-size: 2.2rem !important;
     font-weight: 800 !important;
     margin-bottom: 2px !important;
     letter-spacing: 2px !important;
@@ -128,23 +171,22 @@ body::after {
     text-align: center;
     color: #6b7fa8 !important;
     margin-top: 0 !important;
-    font-size: 0.95rem !important;
+    font-size: 0.9rem !important;
     letter-spacing: 1px !important;
 }
 
 /* ============================================================
-   玻璃拟态面板 — 关键：overflow: visible 让下拉弹出
+   玻璃拟态面板
    ============================================================ */
 .chat-panel, .preview-panel, .settings-row {
     background: rgba(255,255,255,0.025) !important;
     backdrop-filter: blur(16px);
     -webkit-backdrop-filter: blur(16px);
     border: 1px solid rgba(255,255,255,0.07) !important;
-    border-radius: 18px !important;
-    padding: 20px !important;
+    border-radius: 16px !important;
+    padding: 18px !important;
     position: relative;
-    z-index: 1;
-    overflow: visible !important;
+    z-index: 2;
     box-shadow: 0 8px 32px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.03) !important;
     transition: border-color 0.4s ease, box-shadow 0.4s ease;
 }
@@ -152,10 +194,12 @@ body::after {
     border-color: rgba(255,255,255,0.12) !important;
     box-shadow: 0 8px 32px rgba(0,0,0,0.35), 0 0 45px rgba(100,50,200,0.07), inset 0 1px 0 rgba(255,255,255,0.04) !important;
 }
+
+/* 设置行 — 紧凑 */
 .settings-row {
-    margin-bottom: 14px !important;
+    margin-bottom: 12px !important;
     align-items: end !important;
-    padding: 14px 20px !important;
+    padding: 12px 18px !important;
 }
 
 /* ============================================================
@@ -167,41 +211,43 @@ body::after {
     -webkit-text-fill-color: transparent;
     font-weight: 700 !important;
     letter-spacing: 0.5px !important;
+    font-size: 0.95rem !important;
+    margin-bottom: 8px !important;
 }
 
 /* ============================================================
-   下拉框 — 确保弹出菜单不被遮挡
+   下拉框 — 最高层级，确保不被遮挡
    ============================================================ */
 .gr-dropdown {
     position: relative !important;
-    z-index: 9999 !important;
-    overflow: visible !important;
+    z-index: 99999 !important;
 }
 .gr-dropdown [class*="select-wrap"],
 .gr-dropdown [class*="wrap"] {
     overflow: visible !important;
+    position: relative !important;
+    z-index: 99999 !important;
 }
 .gr-dropdown ul,
 .gr-dropdown [class*="dropdown"],
-.gr-dropdown [class*="select"],
+.gr-dropdown [class*="select"] ul,
 .gr-dropdown [class*="options"],
-.gr-dropdown [class*="list"],
-.gr-dropdown [class*="menu"],
+.gr-dropdown [class*="listbox"],
 .gr-dropdown [role="listbox"] {
     background: #16162a !important;
     border: 1px solid rgba(255,255,255,0.15) !important;
     border-radius: 12px !important;
-    z-index: 99999 !important;
-    position: absolute !important;
+    z-index: 2147483647 !important;
+    position: fixed !important;
     overflow: visible !important;
-    box-shadow: 0 12px 40px rgba(0,0,0,0.6) !important;
+    box-shadow: 0 16px 48px rgba(0,0,0,0.7), 0 0 1px rgba(255,255,255,0.08) !important;
 }
 .gr-dropdown li,
 .gr-dropdown [class*="option"],
 .gr-dropdown [class*="item"] {
     color: #cbd5e1 !important;
     border-radius: 8px !important;
-    padding: 8px 12px !important;
+    padding: 8px 14px !important;
 }
 .gr-dropdown li:hover,
 .gr-dropdown [class*="option"]:hover,
@@ -211,11 +257,11 @@ body::after {
     color: #e2e8f0 !important;
 }
 
-/* Label 颜色 */
+/* Label */
 .gr-dropdown label, .gr-textbox label, .gr-number label,
 label, .gr-input-label {
     color: #a5b4fc !important;
-    font-size: 0.85rem !important;
+    font-size: 0.82rem !important;
     font-weight: 500 !important;
 }
 
@@ -226,7 +272,7 @@ label, .gr-input-label {
     border: 2px solid rgba(120,80,220,0.3) !important;
     border-radius: 14px !important;
     background: rgba(0,0,0,0.35) !important;
-    min-height: 380px !important;
+    min-height: 340px !important;
     box-shadow: 0 0 30px rgba(100,50,200,0.08), inset 0 0 60px rgba(100,50,200,0.03) !important;
     transition: border-color 0.5s ease, box-shadow 0.5s ease;
 }
@@ -247,7 +293,6 @@ label, .gr-input-label {
 ::-webkit-scrollbar-thumb:hover {
     background: linear-gradient(180deg, rgba(120,50,200,0.75), rgba(0,150,255,0.55));
 }
-::-webkit-scrollbar-corner { background: transparent; }
 * { scrollbar-width: thin; scrollbar-color: rgba(120,50,200,0.4) transparent; }
 
 /* ============================================================
@@ -288,6 +333,25 @@ label, .gr-input-label {
     opacity: 0.7 !important;
 }
 
+/* 加载动画消息 */
+.loading-msg .message-wrap {
+    display: flex; align-items: center; gap: 10px;
+}
+.loading-dots span {
+    display: inline-block;
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: #8b5cf6;
+    animation: dotBounce 1.4s ease-in-out infinite both;
+}
+.loading-dots span:nth-child(1) { animation-delay: 0s; }
+.loading-dots span:nth-child(2) { animation-delay: 0.16s; }
+.loading-dots span:nth-child(3) { animation-delay: 0.32s; }
+@keyframes dotBounce {
+    0%, 80%, 100% { transform: scale(0.5); opacity: 0.4; }
+    40% { transform: scale(1); opacity: 1; }
+}
+
 /* ============================================================
    输入框全局暗黑圆角
    ============================================================ */
@@ -310,9 +374,7 @@ input::placeholder, textarea::placeholder {
     color: rgba(255,255,255,0.2) !important;
 }
 
-/* ============================================================
-   Chat 输入框
-   ============================================================ */
+/* Chat 输入框 */
 #chat-input textarea {
     font-size: 15px !important;
     line-height: 1.55 !important;
@@ -321,7 +383,7 @@ input::placeholder, textarea::placeholder {
 }
 
 /* ============================================================
-   按钮样式 — 适度动效，不过分夸张
+   按钮样式
    ============================================================ */
 button, .gr-button {
     transition: all 0.2s ease !important;
@@ -349,8 +411,8 @@ button, .gr-button {
 }
 .gr-button-primary:disabled,
 .gr-button-primary[disabled] {
-    background: linear-gradient(135deg, #4a1d8a, #312e81) !important;
-    opacity: 0.6 !important;
+    background: linear-gradient(135deg, #3a1d6a, #272250) !important;
+    opacity: 0.5 !important;
     cursor: not-allowed !important;
     box-shadow: none !important;
 }
@@ -422,7 +484,7 @@ button.size-sm:active, .gr-button-sm:active {
 .prose strong, .markdown strong { color: #e2e8f0 !important; }
 
 /* ============================================================
-   布局 — 两列等高对齐
+   布局
    ============================================================ */
 .main-row {
     align-items: stretch !important;
@@ -431,8 +493,8 @@ button.size-sm:active, .gr-button-sm:active {
     display: flex !important;
     flex-direction: column !important;
 }
-.preview-panel > * + * { margin-top: 14px !important; }
-.chat-panel > * + *    { margin-top: 12px !important; }
+.preview-panel > * + * { margin-top: 12px !important; }
+.chat-panel > * + *    { margin-top: 10px !important; }
 
 /* 左侧对话面板底部填充区 */
 .chat-footer-area {
@@ -440,11 +502,22 @@ button.size-sm:active, .gr-button-sm:active {
     display: flex !important;
     align-items: flex-end !important;
     justify-content: center !important;
-    padding: 12px !important;
+    padding: 10px !important;
     color: #4a5568 !important;
-    font-size: 0.8rem !important;
+    font-size: 0.78rem !important;
     text-align: center !important;
-    opacity: 0.5 !important;
+    opacity: 0.45 !important;
+}
+
+/* 功能分区标签 */
+.section-label {
+    color: #6366f1 !important;
+    font-size: 0.72rem !important;
+    font-weight: 600 !important;
+    letter-spacing: 1px !important;
+    text-transform: uppercase !important;
+    opacity: 0.7 !important;
+    margin-bottom: 4px !important;
 }
 
 /* ============================================================

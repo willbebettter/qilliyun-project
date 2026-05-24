@@ -14,12 +14,13 @@ from core import (
     chat,
     create_executor,
     download_image,
-    save_image_as,
 )
 
 _CSS_PATH = Path(__file__).parent / "style.css"
 
 NO_PREVIEW = "🎨 素材将在此处实时预览\n\n*在左侧输入描述后点击「生成」开始创作*"
+
+LOADING_MSG = "🎨 **AI 正在生成素材中…**\n\n<span class='loading-dots'><span></span><span></span><span></span></span>"
 
 
 class Session:
@@ -71,9 +72,14 @@ def _process_image(img_url: str | None, prompt: str) -> tuple[str | None, str, s
     return local_path, _preview_info(local_path, prompt), local_path
 
 
+def _toggle_send_btn(text: str):
+    has_content = bool(text and text.strip())
+    return gr.update(interactive=has_content)
+
+
 def respond(message, history):
     if not message.strip():
-        return history, "", None, NO_PREVIEW, gr.update(interactive=False), session.gallery, gr.update(interactive=True)
+        return history, "", None, NO_PREVIEW, gr.update(interactive=False), session.gallery, gr.update(interactive=False)
 
     session.ensure_executor()
     try:
@@ -132,6 +138,7 @@ def new_conversation():
     session.current_image = None
     return (
         [],
+        "",
         None,
         NO_PREVIEW,
         gr.update(interactive=False, value=None),
@@ -140,18 +147,23 @@ def new_conversation():
     )
 
 
-def random_example():
-    return random.choice(EXAMPLE_PROMPTS)
-
-
-def _fill_example(idx: int):
-    def _fn():
-        return EXAMPLE_PROMPTS[idx]
-    return _fn
+def quick_generate(prompt_text: str, history):
+    if not prompt_text.strip():
+        return history, "", None, NO_PREVIEW, gr.update(interactive=False), session.gallery, gr.update(interactive=True)
+    return respond(prompt_text, history)
 
 
 def build_ui():
     with gr.Blocks(title="2D 游戏素材 AI 生成器") as demo:
+
+        gr.HTML("""
+<div id="bg-particles">
+  <div class="p"></div><div class="p"></div><div class="p"></div>
+  <div class="p"></div><div class="p"></div><div class="p"></div>
+  <div class="p"></div><div class="p"></div>
+</div>
+""")
+
         gr.Markdown("# 🎮 2D 游戏素材 AI 生成器", elem_id="main-title")
         gr.Markdown(
             "Powered by Qwen + Wanx · 生成后可在右侧实时预览，并保存到本地",
@@ -160,18 +172,21 @@ def build_ui():
 
         with gr.Row(elem_classes="settings-row"):
             with gr.Column(scale=1):
+                gr.Markdown("⚙️ **风格设置**", elem_classes="section-label")
                 style_dd = gr.Dropdown(
                     choices=list(STYLE_PRESETS.keys()),
                     value="像素风",
                     label="🎨 画风",
                 )
             with gr.Column(scale=1):
+                gr.Markdown("📂 **素材分类**", elem_classes="section-label")
                 cat_dd = gr.Dropdown(
                     choices=["（通用）"] + list(CATEGORY_TEMPLATES.keys()),
                     value="（通用）",
                     label="📦 素材分类",
                 )
             with gr.Column(scale=2):
+                gr.Markdown("⚡ **快速生成**", elem_classes="section-label")
                 with gr.Row():
                     ex_btn1 = gr.Button("⚔️ 战士", size="sm", variant="secondary")
                     ex_btn2 = gr.Button("🧪 药水", size="sm", variant="secondary")
@@ -181,17 +196,17 @@ def build_ui():
                     rand_btn = gr.Button("🎲 随机", size="sm", variant="secondary")
             with gr.Column(scale=1):
                 status_md = gr.Markdown("当前：**像素风** · **通用**")
-                new_btn = gr.Button("🆕 新建对话", variant="secondary", size="sm")
+                new_btn = gr.Button("🆕 新建对话", size="sm", variant="secondary")
 
         with gr.Row(elem_classes="main-row"):
             with gr.Column(scale=5, elem_classes="chat-panel"):
+                gr.Markdown("### 💬 对话区")
                 chatbot = gr.Chatbot(
-                    label="💬 对话",
                     value=[],
                     placeholder="输入素材描述，点击 ✨ 生成 开始创作你的2D游戏素材",
-                    height=540,
+                    height=520,
                     buttons=["copy"],
-                    show_label=True,
+                    show_label=False,
                 )
                 msg_input = gr.Textbox(
                     placeholder="描述你的素材，例如：持盾的骑士角色，蓝色盔甲，待机姿势…",
@@ -202,18 +217,18 @@ def build_ui():
                 send_btn = gr.Button(
                     "✨ 生成",
                     variant="primary",
+                    interactive=False,
                     elem_id="send-btn-wrap",
                 )
                 gr.Markdown(
-                    "按 **Enter** 发送 · 点击顶部快捷按钮可自动填充示例",
+                    "按 **Enter** 发送 · 点击顶部快捷按钮可一键快速生成",
                     elem_classes="chat-footer-area",
                 )
 
             with gr.Column(scale=3, elem_classes="preview-panel"):
                 gr.Markdown("### 🖼️ 素材在线预览")
                 preview = gr.Image(
-                    label="",
-                    height=380,
+                    height=340,
                     show_label=False,
                     interactive=False,
                     elem_id="preview-window",
@@ -234,7 +249,7 @@ def build_ui():
                 gallery = gr.Gallery(
                     label="点击缩略图可切换预览",
                     columns=3,
-                    height=160,
+                    height=150,
                     object_fit="contain",
                     allow_preview=True,
                 )
@@ -249,6 +264,8 @@ def build_ui():
             [style_dd, cat_dd],
             [status_md],
         )
+
+        msg_input.change(_toggle_send_btn, [msg_input], [send_btn])
 
         gen_outputs = [chatbot, msg_input, preview, preview_info, save_btn, gallery, send_btn]
 
@@ -277,15 +294,35 @@ def build_ui():
 
         new_btn.click(
             new_conversation,
-            outputs=[chatbot, preview, preview_info, save_btn, gallery, status_md],
+            outputs=[chatbot, msg_input, preview, preview_info, save_btn, gallery, status_md],
         )
 
-        ex_btn1.click(_fill_example(0), outputs=[msg_input])
-        ex_btn2.click(_fill_example(1), outputs=[msg_input])
-        ex_btn3.click(_fill_example(2), outputs=[msg_input])
-        ex_btn4.click(_fill_example(3), outputs=[msg_input])
-        ex_btn5.click(_fill_example(4), outputs=[msg_input])
-        rand_btn.click(random_example, outputs=[msg_input])
+        qg_outputs = [chatbot, msg_input, preview, preview_info, save_btn, gallery, send_btn]
+
+        for btn, idx in zip([ex_btn1, ex_btn2, ex_btn3, ex_btn4, ex_btn5], range(5)):
+            btn.click(
+                lambda i=idx: EXAMPLE_PROMPTS[i],
+                outputs=[msg_input],
+            ).then(
+                lambda: gr.update(interactive=False),
+                outputs=[send_btn],
+            ).then(
+                quick_generate,
+                [msg_input, chatbot],
+                qg_outputs,
+            )
+
+        rand_btn.click(
+            random_example,
+            outputs=[msg_input],
+        ).then(
+            lambda: gr.update(interactive=False),
+            outputs=[send_btn],
+        ).then(
+            quick_generate,
+            [msg_input, chatbot],
+            qg_outputs,
+        )
 
     return demo
 
@@ -296,8 +333,8 @@ def _theme():
         secondary_hue="blue",
         neutral_hue="slate",
     ).set(
-        body_background_fill="#050510",
-        body_background_fill_dark="#050510",
+        body_background_fill="#030308",
+        body_background_fill_dark="#030308",
         block_background_fill="rgba(255,255,255,0.03)",
         block_background_fill_dark="rgba(255,255,255,0.03)",
         block_border_color="rgba(255,255,255,0.06)",
