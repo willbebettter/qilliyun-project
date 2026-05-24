@@ -61,7 +61,11 @@ copy .env.example .env
 DASHSCOPE_API_KEY=sk-xxxxxxxxxxxxxxxx
 ```
 
-> API Key 获取：[阿里云 DashScope 控制台](https://dashscope.console.aliyun.com/)
+> **获取 API Key：**
+> 1. 访问 [阿里云 DashScope 控制台](https://dashscope.console.aliyun.com/)
+> 2. 注册/登录阿里云账号
+> 3. 开通 DashScope 服务（新用户有免费额度）
+> 4. 在控制台左侧菜单 → 「API-KEY管理」→ 创建新的 API Key
 
 或在终端设置环境变量：
 
