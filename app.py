@@ -114,15 +114,6 @@ def on_gallery_select(evt: gr.SelectData):
     )
 
 
-def on_custom_save(filename: str):
-    if not filename.strip():
-        return gr.update(), "⚠️ 请输入文件名"
-    saved = save_image_as(session.current_image, filename.strip())
-    if not saved:
-        return gr.update(interactive=False), "⚠️ 当前没有可保存的图片"
-    return gr.update(interactive=True, value=saved), f"✅ 已准备下载：**{Path(saved).name}**，点击「保存到本地」选择存放位置"
-
-
 def on_style_change(style):
     session.style = style
     session.reset_executor()
@@ -146,7 +137,6 @@ def new_conversation():
         gr.update(interactive=False, value=None),
         session.gallery,
         "🔄 已新建对话",
-        "",
     )
 
 
@@ -209,19 +199,21 @@ def build_ui():
                     lines=2,
                     elem_id="chat-input",
                 )
-                with gr.Row():
-                    send_btn = gr.Button(
-                        "✨ 生成",
-                        variant="primary",
-                        scale=1,
-                        elem_id="send-btn-wrap",
-                    )
+                send_btn = gr.Button(
+                    "✨ 生成",
+                    variant="primary",
+                    elem_id="send-btn-wrap",
+                )
+                gr.Markdown(
+                    "按 **Enter** 发送 · 点击顶部快捷按钮可自动填充示例",
+                    elem_classes="chat-footer-area",
+                )
 
             with gr.Column(scale=3, elem_classes="preview-panel"):
                 gr.Markdown("### 🖼️ 素材在线预览")
                 preview = gr.Image(
                     label="",
-                    height=400,
+                    height=380,
                     show_label=False,
                     interactive=False,
                     elem_id="preview-window",
@@ -229,19 +221,13 @@ def build_ui():
                 preview_info = gr.Markdown(NO_PREVIEW)
 
                 gr.Markdown("### 💾 保存到本地")
-                save_filename = gr.Textbox(
-                    label="自定义文件名（可选）",
-                    placeholder="例如：knight_sprite.png，留空则使用自动命名",
+                save_btn = gr.DownloadButton(
+                    "💾 保存到本地",
+                    variant="primary",
+                    interactive=False,
                 )
-                with gr.Row():
-                    prepare_save_btn = gr.Button("📁 准备另存为", size="sm", variant="secondary")
-                    save_btn = gr.DownloadButton(
-                        "💾 保存到本地",
-                        variant="primary",
-                        interactive=False,
-                    )
                 save_status = gr.Markdown(
-                    "点击「保存到本地」可在弹窗中选择任意目录保存"
+                    "生成素材后点击按钮，在弹窗中选择保存位置"
                 )
 
                 gr.Markdown("### 📚 历史素材")
@@ -289,15 +275,9 @@ def build_ui():
             outputs=[preview, preview_info, save_btn],
         )
 
-        prepare_save_btn.click(
-            on_custom_save,
-            inputs=[save_filename],
-            outputs=[save_btn, save_status],
-        )
-
         new_btn.click(
             new_conversation,
-            outputs=[chatbot, preview, preview_info, save_btn, gallery, status_md, save_filename],
+            outputs=[chatbot, preview, preview_info, save_btn, gallery, status_md],
         )
 
         ex_btn1.click(_fill_example(0), outputs=[msg_input])

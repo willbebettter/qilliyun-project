@@ -6,7 +6,7 @@ body, html {
     margin: 0; padding: 0;
 }
 .gradio-container {
-    background: #050510 !important;
+    background: transparent !important;
     min-height: 100vh;
     max-width: 100% !important;
     position: relative;
@@ -14,31 +14,55 @@ body, html {
 footer { display: none !important; }
 
 /* ============================================================
-   背景动效 ① — 无缝流动极光光晕（160% 画布永不露边）
+   背景动效 ① — 旋转锥形渐变（200%画布，永不露边）
    ============================================================ */
 body::before {
     content: '';
     position: fixed;
-    top: -30%; left: -30%;
-    width: 160%; height: 160%;
+    top: -50%; left: -50%;
+    width: 200%; height: 200%;
     z-index: 0;
     pointer-events: none;
-    background:
-        radial-gradient(ellipse 50% 50% at 20% 35%, rgba(110,40,210,0.18), transparent 60%),
-        radial-gradient(ellipse 45% 45% at 75% 25%, rgba(20,110,240,0.14), transparent 60%),
-        radial-gradient(ellipse 40% 40% at 55% 75%, rgba(210,30,110,0.11), transparent 60%),
-        radial-gradient(ellipse 35% 35% at 85% 65%, rgba(25,195,150,0.09), transparent 55%);
-    animation: bgDrift 28s ease-in-out infinite;
+    background: conic-gradient(
+        from 0deg at 50% 50%,
+        rgba(110,40,210,0.14),
+        rgba(20,110,240,0.10),
+        rgba(25,195,150,0.06),
+        rgba(210,30,110,0.09),
+        rgba(139,92,246,0.12),
+        rgba(59,130,246,0.08),
+        rgba(110,40,210,0.14)
+    );
+    animation: rotateBg 40s linear infinite;
 }
-@keyframes bgDrift {
-    0%, 100% { transform: translate(0, 0) rotate(0deg); }
-    25%  { transform: translate(4%, -2%) rotate(3deg); }
-    50%  { transform: translate(-3%, 3%) rotate(-2deg); }
-    75%  { transform: translate(2%, -1%) rotate(1deg); }
+@keyframes rotateBg {
+    from { transform: rotate(0deg); }
+    to   { transform: rotate(360deg); }
 }
 
 /* ============================================================
-   背景动效 ② — 密集星空粒子闪烁
+   背景动效 ② — 流动斜条纹
+   ============================================================ */
+body::after {
+    content: '';
+    position: fixed; inset: 0;
+    z-index: 0; pointer-events: none;
+    background-image: repeating-linear-gradient(
+        -45deg,
+        transparent,
+        transparent 50px,
+        rgba(255,255,255,0.007) 50px,
+        rgba(255,255,255,0.007) 100px
+    );
+    animation: stripeMove 25s linear infinite;
+}
+@keyframes stripeMove {
+    from { background-position: 0 0; }
+    to   { background-position: 141px 141px; }
+}
+
+/* ============================================================
+   背景动效 ③ — 星空粒子闪烁
    ============================================================ */
 .gradio-container::before {
     content: '';
@@ -78,44 +102,6 @@ body::before {
     100% { opacity: 0.9; }
 }
 
-/* ============================================================
-   背景动效 ③ — 科技网格底纹（中心渐隐）
-   ============================================================ */
-body::after {
-    content: '';
-    position: fixed; inset: 0;
-    z-index: 0; pointer-events: none;
-    background-image:
-        linear-gradient(rgba(255,255,255,0.012) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(255,255,255,0.012) 1px, transparent 1px);
-    background-size: 64px 64px;
-    mask-image: radial-gradient(ellipse 70% 70% at 50% 50%, black 20%, transparent 70%);
-    -webkit-mask-image: radial-gradient(ellipse 70% 70% at 50% 50%, black 20%, transparent 70%);
-}
-
-/* ============================================================
-   背景动效 ④ — 浮动光球粒子（纯 CSS 动画）
-   ============================================================ */
-.gradio-container::after {
-    content: '';
-    position: fixed; inset: 0;
-    z-index: 0; pointer-events: none;
-    overflow: hidden;
-    background:
-        radial-gradient(circle 80px at 15% 20%, rgba(139,92,246,0.08), transparent),
-        radial-gradient(circle 60px at 80% 40%, rgba(59,130,246,0.06), transparent),
-        radial-gradient(circle 100px at 50% 80%, rgba(236,72,153,0.05), transparent),
-        radial-gradient(circle 50px at 70% 10%, rgba(34,211,238,0.07), transparent);
-    animation: floatOrbs 20s ease-in-out infinite;
-}
-@keyframes floatOrbs {
-    0%, 100% { transform: translate(0, 0); }
-    20%  { transform: translate(30px, -20px); }
-    40%  { transform: translate(-20px, 30px); }
-    60%  { transform: translate(25px, 15px); }
-    80%  { transform: translate(-15px, -25px); }
-}
-
 /* 面板在动效之上 */
 .gradio-container > * { position: relative; z-index: 1; }
 
@@ -147,7 +133,7 @@ body::after {
 }
 
 /* ============================================================
-   玻璃拟态面板
+   玻璃拟态面板 — 关键：overflow: visible 让下拉弹出
    ============================================================ */
 .chat-panel, .preview-panel, .settings-row {
     background: rgba(255,255,255,0.025) !important;
@@ -158,6 +144,7 @@ body::after {
     padding: 20px !important;
     position: relative;
     z-index: 1;
+    overflow: visible !important;
     box-shadow: 0 8px 32px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.03) !important;
     transition: border-color 0.4s ease, box-shadow 0.4s ease;
 }
@@ -165,8 +152,6 @@ body::after {
     border-color: rgba(255,255,255,0.12) !important;
     box-shadow: 0 8px 32px rgba(0,0,0,0.35), 0 0 45px rgba(100,50,200,0.07), inset 0 1px 0 rgba(255,255,255,0.04) !important;
 }
-.chat-panel { height: 100% !important; }
-.preview-panel { height: 100% !important; }
 .settings-row {
     margin-bottom: 14px !important;
     align-items: end !important;
@@ -185,13 +170,63 @@ body::after {
 }
 
 /* ============================================================
+   下拉框 — 确保弹出菜单不被遮挡
+   ============================================================ */
+.gr-dropdown {
+    position: relative !important;
+    z-index: 9999 !important;
+    overflow: visible !important;
+}
+.gr-dropdown [class*="select-wrap"],
+.gr-dropdown [class*="wrap"] {
+    overflow: visible !important;
+}
+.gr-dropdown ul,
+.gr-dropdown [class*="dropdown"],
+.gr-dropdown [class*="select"],
+.gr-dropdown [class*="options"],
+.gr-dropdown [class*="list"],
+.gr-dropdown [class*="menu"],
+.gr-dropdown [role="listbox"] {
+    background: #16162a !important;
+    border: 1px solid rgba(255,255,255,0.15) !important;
+    border-radius: 12px !important;
+    z-index: 99999 !important;
+    position: absolute !important;
+    overflow: visible !important;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.6) !important;
+}
+.gr-dropdown li,
+.gr-dropdown [class*="option"],
+.gr-dropdown [class*="item"] {
+    color: #cbd5e1 !important;
+    border-radius: 8px !important;
+    padding: 8px 12px !important;
+}
+.gr-dropdown li:hover,
+.gr-dropdown [class*="option"]:hover,
+.gr-dropdown [class*="item"]:hover,
+.gr-dropdown [class*="selected"] {
+    background: rgba(139,92,246,0.2) !important;
+    color: #e2e8f0 !important;
+}
+
+/* Label 颜色 */
+.gr-dropdown label, .gr-textbox label, .gr-number label,
+label, .gr-input-label {
+    color: #a5b4fc !important;
+    font-size: 0.85rem !important;
+    font-weight: 500 !important;
+}
+
+/* ============================================================
    图片预览窗口
    ============================================================ */
 #preview-window {
     border: 2px solid rgba(120,80,220,0.3) !important;
     border-radius: 14px !important;
     background: rgba(0,0,0,0.35) !important;
-    min-height: 400px !important;
+    min-height: 380px !important;
     box-shadow: 0 0 30px rgba(100,50,200,0.08), inset 0 0 60px rgba(100,50,200,0.03) !important;
     transition: border-color 0.5s ease, box-shadow 0.5s ease;
 }
@@ -226,31 +261,25 @@ body::after {
     margin: 6px 0 !important;
     max-width: 90% !important;
     word-wrap: break-word !important;
-    animation: msgIn 0.35s ease-out;
+    animation: msgIn 0.3s ease-out;
 }
 @keyframes msgIn {
-    from { opacity: 0; transform: translateY(10px); }
+    from { opacity: 0; transform: translateY(8px); }
     to   { opacity: 1; transform: translateY(0); }
 }
 .chatbot .user .message-wrap {
-    border: 1px solid rgba(120,80,220,0.25) !important;
+    border: 1px solid rgba(120,80,220,0.2) !important;
     border-radius: 14px !important;
-    box-shadow: 0 0 12px rgba(120,80,220,0.1) !important;
 }
 .chatbot .bot .message-wrap {
-    border: 1px solid rgba(0,180,200,0.2) !important;
+    border: 1px solid rgba(0,180,200,0.15) !important;
     border-radius: 14px !important;
-    box-shadow: 0 0 12px rgba(0,180,200,0.08) !important;
 }
 .chatbot {
     overflow-y: auto !important;
     scroll-behavior: smooth !important;
 }
 .chatbot .messages { overflow-y: auto !important; }
-
-/* ============================================================
-   Chatbot 空状态占位文字
-   ============================================================ */
 .chatbot .empty-state, .chatbot .placeholder {
     color: #6b7fa8 !important;
     font-size: 14px !important;
@@ -274,44 +303,11 @@ input:focus, textarea:focus, select:focus,
 .gr-textbox input:focus, .gr-textbox textarea:focus,
 .gr-dropdown:focus-within {
     border-color: rgba(120,80,220,0.45) !important;
-    box-shadow: 0 0 18px rgba(120,80,220,0.12) !important;
+    box-shadow: 0 0 14px rgba(120,80,220,0.1) !important;
     outline: none !important;
 }
 input::placeholder, textarea::placeholder {
     color: rgba(255,255,255,0.2) !important;
-}
-
-/* ============================================================
-   下拉框弹出菜单 — 关键：确保不被面板遮挡
-   ============================================================ */
-.gr-dropdown {
-    position: relative !important;
-    z-index: 9999 !important;
-}
-.gr-dropdown ul, .gr-dropdown .options,
-.gr-dropdown [class*="select"], .gr-dropdown [class*="dropdown"],
-.gr-dropdown [class*="menu"], .gr-dropdown [class*="list"] {
-    background: #12121f !important;
-    border: 1px solid rgba(255,255,255,0.12) !important;
-    border-radius: 12px !important;
-    z-index: 99999 !important;
-    position: absolute !important;
-}
-.gr-dropdown .option, .gr-dropdown li {
-    color: #cbd5e1 !important;
-    border-radius: 8px !important;
-}
-.gr-dropdown .option:hover, .gr-dropdown .option.selected,
-.gr-dropdown li:hover {
-    background: rgba(120,80,220,0.2) !important;
-}
-
-/* Label 颜色 */
-.gr-dropdown label, .gr-textbox label, .gr-number label,
-label, .gr-input-label {
-    color: #a5b4fc !important;
-    font-size: 0.85rem !important;
-    font-weight: 500 !important;
 }
 
 /* ============================================================
@@ -325,115 +321,77 @@ label, .gr-input-label {
 }
 
 /* ============================================================
-   按钮全局暗黑圆角 + 丰富动效
+   按钮样式 — 适度动效，不过分夸张
    ============================================================ */
 button, .gr-button {
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    transition: all 0.2s ease !important;
     border-radius: 12px !important;
-    letter-spacing: 0.5px !important;
+    letter-spacing: 0.3px !important;
     font-weight: 500 !important;
-    position: relative;
-    overflow: hidden;
-}
-button::after, .gr-button::after {
-    content: '';
-    position: absolute;
-    top: 50%; left: 50%;
-    width: 0; height: 0;
-    border-radius: 50%;
-    background: rgba(255,255,255,0.15);
-    transform: translate(-50%, -50%);
-    transition: width 0.5s ease, height 0.5s ease, opacity 0.5s ease;
-    opacity: 0;
-    pointer-events: none;
-}
-button:active::after, .gr-button:active::after {
-    width: 300px; height: 300px;
-    opacity: 1;
-    transition: width 0s, height 0s, opacity 0.15s ease;
+    cursor: pointer !important;
 }
 
-/* 主按钮 — 渐变 + 发光 */
+/* 主按钮 */
 .gr-button-primary {
-    background: linear-gradient(135deg, #8b5cf6, #6366f1, #4f46e5) !important;
-    background-size: 200% 200% !important;
+    background: linear-gradient(135deg, #8b5cf6, #6366f1) !important;
     border: none !important;
-    box-shadow: 0 0 24px rgba(139,92,246,0.4), 0 4px 16px rgba(99,102,241,0.3) !important;
-    font-weight: 700 !important;
+    box-shadow: 0 2px 12px rgba(139,92,246,0.3) !important;
+    font-weight: 600 !important;
     color: #fff !important;
-    animation: primaryShimmer 4s ease infinite;
-}
-@keyframes primaryShimmer {
-    0%   { background-position: 0% 50%; }
-    50%  { background-position: 100% 50%; }
-    100% { background-position: 0% 50%; }
 }
 .gr-button-primary:hover {
-    box-shadow: 0 0 36px rgba(139,92,246,0.6), 0 6px 20px rgba(99,102,241,0.4) !important;
-    transform: translateY(-2px) scale(1.02);
+    box-shadow: 0 4px 18px rgba(139,92,246,0.45) !important;
+    filter: brightness(1.08);
 }
 .gr-button-primary:active {
-    transform: translateY(1px) scale(0.98);
-    box-shadow: 0 0 16px rgba(139,92,246,0.3), 0 2px 8px rgba(99,102,241,0.2) !important;
+    filter: brightness(0.95);
+    box-shadow: 0 1px 6px rgba(139,92,246,0.2) !important;
 }
-
-/* 生成按钮呼吸动画 */
-#send-btn-wrap button {
-    animation: btnBreath 3s ease-in-out infinite, primaryShimmer 4s ease infinite;
-    padding: 14px 32px !important;
-    font-size: 16px !important;
-}
-@keyframes btnBreath {
-    0%, 100% { box-shadow: 0 0 20px rgba(139,92,246,0.35), 0 4px 12px rgba(99,102,241,0.25); }
-    50%      { box-shadow: 0 0 40px rgba(139,92,246,0.65), 0 4px 24px rgba(59,130,246,0.45); }
-}
-
-/* 禁用状态 */
 .gr-button-primary:disabled,
 .gr-button-primary[disabled] {
     background: linear-gradient(135deg, #4a1d8a, #312e81) !important;
     opacity: 0.6 !important;
     cursor: not-allowed !important;
-    animation: none !important;
-    box-shadow: 0 0 8px rgba(139,92,246,0.15) !important;
+    box-shadow: none !important;
 }
 
-/* 次按钮 — hover 发光 + 边框渐变 */
+/* 生成按钮微呼吸 */
+#send-btn-wrap button {
+    animation: btnPulse 3s ease-in-out infinite;
+    padding: 12px 28px !important;
+    font-size: 15px !important;
+}
+@keyframes btnPulse {
+    0%, 100% { box-shadow: 0 2px 12px rgba(139,92,246,0.3); }
+    50%      { box-shadow: 0 2px 20px rgba(139,92,246,0.5); }
+}
+
+/* 次按钮 */
 .gr-button-secondary {
     background: rgba(255,255,255,0.05) !important;
     border: 1px solid rgba(255,255,255,0.1) !important;
     color: #a5b4fc !important;
 }
 .gr-button-secondary:hover {
-    background: rgba(139,92,246,0.12) !important;
-    border-color: rgba(139,92,246,0.3) !important;
+    background: rgba(139,92,246,0.1) !important;
+    border-color: rgba(139,92,246,0.25) !important;
     color: #c7d2fe !important;
-    box-shadow: 0 0 16px rgba(139,92,246,0.15) !important;
-    transform: translateY(-1px);
 }
 .gr-button-secondary:active {
-    transform: translateY(1px);
-    box-shadow: none !important;
+    background: rgba(139,92,246,0.18) !important;
 }
 
-/* 小按钮 (sm size) — 悬浮发光 + 微缩放 */
-button.size-sm, .gr-button-sm,
-[class*="sm"] button, button[class*="sm"] {
+/* 小按钮 */
+button.size-sm, .gr-button-sm {
     border-radius: 10px !important;
-    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    cursor: pointer !important;
 }
-button.size-sm:hover, .gr-button-sm:hover,
-[class*="sm"] button:hover, button[class*="sm"]:hover {
-    background: rgba(139,92,246,0.15) !important;
-    border-color: rgba(139,92,246,0.3) !important;
-    box-shadow: 0 0 14px rgba(139,92,246,0.2) !important;
-    transform: translateY(-2px) scale(1.05);
-    color: #c7d2fe !important;
+button.size-sm:hover, .gr-button-sm:hover {
+    background: rgba(139,92,246,0.1) !important;
+    border-color: rgba(139,92,246,0.2) !important;
 }
-button.size-sm:active, .gr-button-sm:active,
-[class*="sm"] button:active, button[class*="sm"]:active {
-    transform: translateY(0) scale(0.96);
-    box-shadow: 0 0 6px rgba(139,92,246,0.1) !important;
+button.size-sm:active, .gr-button-sm:active {
+    background: rgba(139,92,246,0.18) !important;
 }
 
 /* Download 按钮 */
@@ -441,11 +399,11 @@ button.size-sm:active, .gr-button-sm:active,
     background: linear-gradient(135deg, #059669, #047857) !important;
     border: none !important;
     color: #fff !important;
-    box-shadow: 0 0 16px rgba(5,150,105,0.3) !important;
+    box-shadow: 0 2px 10px rgba(5,150,105,0.25) !important;
 }
 .gr-download-button:hover {
-    box-shadow: 0 0 24px rgba(5,150,105,0.5) !important;
-    transform: translateY(-1px);
+    box-shadow: 0 4px 16px rgba(5,150,105,0.4) !important;
+    filter: brightness(1.08);
 }
 
 /* ============================================================
@@ -464,19 +422,34 @@ button.size-sm:active, .gr-button-sm:active,
 .prose strong, .markdown strong { color: #e2e8f0 !important; }
 
 /* ============================================================
-   面板间距 & Flex 布局
+   布局 — 两列等高对齐
    ============================================================ */
+.main-row {
+    align-items: stretch !important;
+}
 .main-row > div {
     display: flex !important;
     flex-direction: column !important;
 }
 .preview-panel > * + * { margin-top: 14px !important; }
-.sidebar-panel > * + * { margin-top: 10px !important; }
 .chat-panel > * + *    { margin-top: 12px !important; }
 
+/* 左侧对话面板底部填充区 */
+.chat-footer-area {
+    flex: 1 !important;
+    display: flex !important;
+    align-items: flex-end !important;
+    justify-content: center !important;
+    padding: 12px !important;
+    color: #4a5568 !important;
+    font-size: 0.8rem !important;
+    text-align: center !important;
+    opacity: 0.5 !important;
+}
+
 /* ============================================================
-   全局流畅过渡
+   全局过渡
    ============================================================ */
 .gradio-container * {
-    transition: background 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease, opacity 0.3s ease;
+    transition: background 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
 }
