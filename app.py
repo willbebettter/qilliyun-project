@@ -5,11 +5,13 @@ import re
 from pathlib import Path
 
 import gradio as gr
+from PIL import Image
 
 from core import (
     CATEGORY_TEMPLATES,
     EXAMPLE_PROMPTS,
     OUTPUT_DIR,
+    RANDOM_PROMPTS,
     STYLE_PRESETS,
     chat,
     create_executor,
@@ -60,14 +62,19 @@ def _clean_reply(reply: str) -> str:
     return "✅ 素材已生成，请在右侧预览窗口查看。"
 
 
-def _process_image(img_url: str | None, prompt: str) -> tuple[str | None, str, str | None]:
+def _process_image(img_url: str | None, prompt: str) -> tuple[Image.Image | str | None, str, str | None]:
+    """下载远程图到本地，返回 (PIL图/None, 预览说明, 下载路径)。"""
     if not img_url:
         return None, NO_PREVIEW, None
     local_path = download_image(img_url, prompt)
     if not local_path:
         return None, "⚠️ 图片下载失败，请重试", None
     session.current_image = local_path
-    return local_path, _preview_info(local_path, prompt), local_path
+    try:
+        pil_image = Image.open(local_path).convert("RGBA")
+    except Exception:
+        return local_path, _preview_info(local_path, prompt), local_path
+    return pil_image, _preview_info(local_path, prompt), local_path
 
 
 def _toggle_send_btn(text: str):
@@ -150,8 +157,12 @@ def on_gallery_select(evt: gr.SelectData):
         return None, NO_PREVIEW, gr.update(interactive=False)
     local_path, caption = session.gallery[evt.index]
     session.current_image = local_path
+    try:
+        pil_image = Image.open(local_path).convert("RGBA")
+    except Exception:
+        pil_image = local_path
     return (
-        local_path,
+        pil_image,
         _preview_info(local_path, caption),
         gr.update(interactive=True, value=local_path),
     )
@@ -192,7 +203,7 @@ def quick_generate(prompt_text: str, history):
 
 
 def random_example():
-    return random.choice(EXAMPLE_PROMPTS)
+    return random.choice(RANDOM_PROMPTS)
 
 
 def build_ui():
@@ -241,7 +252,7 @@ def build_ui():
                     label="📦 素材分类",
                 )
             with gr.Column(scale=2):
-                gr.Markdown("⚡ **快捷提示词**", elem_classes="section-label")
+                gr.Markdown("⚡ **快捷生成**", elem_classes="section-label")
                 with gr.Row():
                     ex_btn1 = gr.Button("⚔️ 战士", size="sm", variant="secondary")
                     ex_btn2 = gr.Button("🧪 药水", size="sm", variant="secondary")
@@ -283,6 +294,7 @@ def build_ui():
             with gr.Column(scale=3, elem_classes="preview-panel"):
                 gr.Markdown("### 🖼️ 素材在线预览")
                 preview = gr.Image(
+                    type="pil",
                     height=340,
                     show_label=False,
                     interactive=False,
