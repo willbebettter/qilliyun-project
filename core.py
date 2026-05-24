@@ -57,7 +57,7 @@ RANDOM_PROMPTS = [
     "金币UI图标，圆形，金色光泽",
     "火焰骷髅Boss，紫色火焰环绕",
     "魔法爆炸特效，蓝色粒子扩散",
-    "冰霜巨龙Boss，蓝色寒气，展翅姿态",
+    "冰霜巨龙Boss，蓝色寒气，展翅姿势",
     "暗影刺客角色，黑色斗篷，双持匕首",
     "治疗药水，绿色玻璃瓶，气泡效果",
     "魔法卷轴道具，羊皮纸质感，金色符文",
@@ -77,7 +77,7 @@ RANDOM_PROMPTS = [
     "经验值UI进度条，蓝色水晶",
     "机械傀儡Boss，齿轮关节，蒸汽喷涌",
     "冰霜新星特效，白色冰晶扩散",
-    "圣骑士角色，银白铠甲，圣光环绕",
+    "圣骑士角色，银白盔甲，圣光环绕",
     "宝石道具，六边形切割，七彩折射",
     "雪山之巅场景，暴风雪，冰晶",
     "背包UI格，皮革纹理",
@@ -140,6 +140,7 @@ RANDOM_PROMPTS = [
 ]
 
 OUTPUT_DIR = Path(__file__).parent / "output"
+CURRENT_SESSION_DIR = OUTPUT_DIR / "current_session_images"
 
 
 def get_api_key() -> str:
@@ -150,6 +151,17 @@ def get_api_key() -> str:
             "  DASHSCOPE_API_KEY=your_key_here"
         )
     return key
+
+
+def clear_current_session_dir() -> None:
+    """清空本次会话文件夹，新对话调用"""
+    try:
+        if CURRENT_SESSION_DIR.exists():
+            for f in CURRENT_SESSION_DIR.glob("*.png"):
+                f.unlink(missing_ok=True)
+        CURRENT_SESSION_DIR.mkdir(parents=True, exist_ok=True)
+    except Exception:
+        pass
 
 
 def build_image_prompt(description: str, style: str = "像素风", category: str = "") -> str:
@@ -192,9 +204,9 @@ def create_executor(style: str = "像素风", category: str = "") -> AgentExecut
     tools = [gen_tool]
     cat_hint = f"，素材类型偏向「{category}」" if category else ""
     system_msg = (
-        f"你是专业的2D游戏素材生成助手，当前风格为「{style}」{cat_hint}。"
-        "根据用户需求调用生图工具，生成契合2D游戏主题的图片素材。"
-        "回复简洁友好，生成成功后告知用户图片已就绪。"
+        f"你是专业的2D游戏素材生成助手，当前风格为「{style}」{cat_hint}。\n"
+        "根据用户需求调用生图工具，生成契合2D游戏主题的图片素材。\n"
+        "回复简洁友好，生成成功后告知用户图片已就绪。\n"
         "必须返回信息给用户，即使报错也要说明原因。"
     )
     prompt = ChatPromptTemplate.from_messages([
@@ -233,77 +245,80 @@ def _safe_filename(text: str, max_len: int = 24) -> str:
 
 
 def download_image(url: str, prompt: str = "asset") -> str | None:
-    """从远程 URL 下载图片到 output 目录，返回本地路径。带多策略重试。"""
+    """从远程 URL 下载图片到本次会话文件夹，返回本地路径。带多策略重试。"""
     import time as _time
     import requests as _requests
 
-    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+    CURRENT_SESSION_DIR.mkdir(parents=True, exist_ok=True)
     safe_prompt = _safe_filename(prompt)[:30] if prompt else "asset"
     filename = f"{datetime.now():%Y%m%d_%H%M%S}_{safe_prompt}.png"
-    filepath = OUTPUT_DIR / filename
+    filepath = CURRENT_SESSION_DIR / filename
 
-    strategy_list = []
+    strategy_list = [
+        {
+            "name": "browser_full",
+            "headers": {
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
+                "Accept": "image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.9",
+                "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8",
+                "Accept-Encoding": "gzip, deflate, br",
+                "Referer": "https://www.aliyun.com/",
+                "Connection": "keep-alive",
+                "Cache-Control": "no-cache",
+            }
+        },
+        {
+            "name": "browser_simple",
+            "headers": {
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+                "Accept": "*/*",
+                "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8",
+                "Referer": "https://dashscope.aliyuncs.com/",
+            }
+        },
+    ]
 
     try:
         api_key = get_api_key()
         if api_key:
-            strategy_list.append({
+            strategy_list.insert(0, {
                 "name": "auth_headers",
                 "headers": {
-                    "Authorization": f"Bearer {api_key}",
                     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
-                    "Accept": "image/webp,image/apng,image/*,*/*;q=0.8",
+                    "Accept": "image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8",
                     "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8",
                     "Referer": "https://dashscope.aliyuncs.com/",
+                    "Authorization": f"Bearer {api_key}",
                 }
             })
     except Exception:
         pass
 
-    strategy_list.append({
-        "name": "browser_headers",
-        "headers": {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
-            "Accept": "image/webp,image/apng,image/*,*/*;q=0.8",
-            "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8",
-            "Referer": "https://www.aliyun.com/",
-        }
-    })
-
-    strategy_list.append({
-        "name": "minimal_headers",
-        "headers": {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-            "Accept": "*/*",
-        }
-    })
-
     for strategy in strategy_list:
-        headers = strategy["headers"]
         for attempt in range(4):
             try:
-                resp = _requests.get(url, timeout=30, headers=headers, allow_redirects=True)
+                resp = _requests.get(url, timeout=45, headers=strategy["headers"], allow_redirects=True, stream=True)
                 if resp.status_code == 403 and attempt < 3:
-                    _time.sleep(2 * (attempt + 1))
+                    _time.sleep(3 * (attempt + 1))
                     continue
                 if resp.status_code == 429 and attempt < 3:
-                    _time.sleep(5 * (attempt + 1))
+                    _time.sleep(6 * (attempt + 1))
                     continue
                 resp.raise_for_status()
-                content_len = len(resp.content)
-                if content_len < 500:
+                content = resp.content
+                if len(content) < 500:
                     if attempt < 3:
                         _time.sleep(2 * (attempt + 1))
                         continue
-                    break
-                filepath.write_bytes(resp.content)
+                    continue
+                filepath.write_bytes(content)
                 saved_len = filepath.stat().st_size
                 if saved_len < 500:
                     filepath.unlink(missing_ok=True)
                     if attempt < 3:
-                        _time.sleep(2 * (attempt + 1))
+                        _time.sleep(3 * (attempt + 1))
                         continue
-                    break
+                    continue
                 return str(filepath.resolve())
             except Exception:
                 if filepath.exists():

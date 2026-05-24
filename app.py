@@ -2,7 +2,6 @@
 
 import random
 import re
-import time
 from pathlib import Path
 
 import gradio as gr
@@ -16,6 +15,7 @@ from core import (
     chat,
     create_executor,
     download_image,
+    clear_current_session_dir,
 )
 
 _CSS_PATH = Path(__file__).parent / "style.css"
@@ -28,8 +28,8 @@ class Session:
         self.style = "像素风"
         self.category = ""
         self.executor = None
-        self.gallery: list[tuple[str, str]] = []
         self.current_image: str | None = None
+        self.current_img_url: str | None = None
 
     def reset_executor(self):
         self.executor = create_executor(self.style, self.category)
@@ -63,12 +63,18 @@ def _strip_urls(reply: str) -> str:
 
 
 def _process_image(img_url: str | None, prompt: str) -> tuple[str | None, str, str | None]:
-    """下载远程图到本地，预览只传本地路径，失败返回 None 让 gr.Image 显示占位符。"""
+    """下载远程图到本次会话文件夹，预览只传本地路径，失败返回URL提示。"""
     if not img_url:
         return None, NO_PREVIEW, None
+    session.current_img_url = img_url
     local_path = download_image(img_url, prompt)
     if not local_path:
-        return None, f"⚠️ 图片下载到本地失败\n\n请尝试检查网络连接后重试", None
+        info = (
+            f"⚠️ 图片下载到本地失败\n\n"
+            f"远程图片链接：[点击查看]({img_url})\n\n"
+            f"请尝试复制链接在浏览器查看"
+        )
+        return None, info, None
     session.current_image = local_path
     return local_path, _preview_info(local_path, prompt), local_path
 
@@ -78,7 +84,7 @@ def _build_final_prompt(user_prompt: str, style: str, category: str) -> str:
     style_hint = STYLE_PRESETS.get(style, "")
     cat_template = CATEGORY_TEMPLATES.get(category, "")
     if category and cat_template:
-        base = cat_template.replace("{desc}", user_prompt.strip())
+        base = cat_template.format(desc=user_prompt.strip())
     else:
         base = user_prompt.strip()
     if not base.endswith("。"):
@@ -91,7 +97,7 @@ def _build_final_prompt(user_prompt: str, style: str, category: str) -> str:
 def respond_generator(message, history):
     """带加载动画的响应函数（生成器模式）。"""
     if not message.strip():
-        yield history, "", None, NO_PREVIEW, gr.update(interactive=False), session.gallery, gr.update(interactive=False)
+        yield history, "", None, NO_PREVIEW, gr.update(interactive=False), gr.update(interactive=False)
         return
 
     final_prompt = _build_final_prompt(message, session.style, session.category)
@@ -101,8 +107,8 @@ def respond_generator(message, history):
         {
             "role": "assistant",
             "content": "🎨 **AI 正在生成素材中…**  \n\n"
-            f"（融合提示词：{final_prompt[:80]}{'…' if len(final_prompt) > 80 else ''}）  \n\n"
-            '<span class="loading-dots"><span></span><span></span><span></span></span>',
+            f"（融合提示词：{final_prompt[:80]}{'…' if len(final_prompt) > 80 else ''}）\n\n"
+            '<span class="loading-dots"><span></span><span></span><span></span></span>'
         },
     ]
     yield (
@@ -111,7 +117,6 @@ def respond_generator(message, history):
         None,
         NO_PREVIEW,
         gr.update(interactive=False),
-        session.gallery,
         gr.update(interactive=False),
     )
 
@@ -120,25 +125,28 @@ def respond_generator(message, history):
         reply, img_url = chat(session.executor, final_prompt)
 
         preview_path, info, download_path = _process_image(img_url, message)
-        if preview_path and img_url and download_path:
-            session.gallery = [(preview_path, message)] + session.gallery[:11]
 
         safe_reply = _strip_urls(reply)
 
         style_label = session.style
         category_label = session.category or "通用"
-        context_line = f"\n\n🎨 画风（可自定义） **{style_label}** · 📂 分类（可自定义） **{category_label}**"
+        context_line = f"\n\n🎨 画风（可自定义）** {style_label}** · 📂 分类（可自定义）** {category_label}**"
+
+        if img_url:
+            url_line = f"\n\n🖼️ 远程图片：[点击查看]({img_url})"
+        else:
+            url_line = ""
 
         if safe_reply:
             if preview_path:
                 safe_reply += context_line + "\n\n✅ 素材已生成，请在右侧预览窗口查看"
             else:
-                safe_reply += context_line + "\n\n⚠️ 图片下载失败，但已获取生成结果，请稍后重试下载"
+                safe_reply += context_line + url_line + "\n\n⚠️ 图片下载失败，请尝试点击上方链接在浏览器查看"
         else:
             safe_reply = (
                 (context_line + "\n\n✅ 素材已生成，请在右侧预览窗口查看")
                 if preview_path
-                else context_line + "\n\n⚠️ 生成结果获取异常，请重试"
+                else context_line + url_line + "\n\n⚠️ 生成结果获取异常，请重试"
             )
 
         final_history = history + [
@@ -153,7 +161,6 @@ def respond_generator(message, history):
             preview_path,
             info,
             gr.update(interactive=has_image, value=download_path),
-            session.gallery,
             gr.update(interactive=True),
         )
 
@@ -168,7 +175,6 @@ def respond_generator(message, history):
             None,
             NO_PREVIEW,
             gr.update(interactive=False),
-            session.gallery,
             gr.update(interactive=True),
         )
 
@@ -176,20 +182,6 @@ def respond_generator(message, history):
 def _toggle_send_btn(text: str):
     has_content = bool(text and text.strip())
     return gr.update(interactive=has_content)
-
-
-def on_gallery_select(evt: gr.SelectData):
-    if evt.index is None or evt.index >= len(session.gallery):
-        return None, NO_PREVIEW, gr.update(interactive=False)
-    local_path, caption = session.gallery[evt.index]
-    if not local_path or not Path(local_path).is_file():
-        return None, NO_PREVIEW, gr.update(interactive=False)
-    session.current_image = local_path
-    return (
-        local_path,
-        _preview_info(local_path, caption),
-        gr.update(interactive=True, value=local_path),
-    )
 
 
 def on_style_change(style):
@@ -206,22 +198,23 @@ def on_category_change(category):
 
 
 def new_conversation():
+    clear_current_session_dir()
     session.reset_executor()
     session.current_image = None
+    session.current_img_url = None
     return (
         [],
         "",
         None,
         NO_PREVIEW,
         gr.update(interactive=False, value=None),
-        session.gallery,
         "🔄 已新建对话",
     )
 
 
 def quick_generate(prompt_text: str, history):
     if not prompt_text.strip():
-        yield history, "", None, NO_PREVIEW, gr.update(interactive=False), session.gallery, gr.update(interactive=True)
+        yield history, "", None, NO_PREVIEW, gr.update(interactive=False), gr.update(interactive=True)
         return
     yield from respond_generator(prompt_text, history)
 
@@ -294,7 +287,7 @@ def build_ui():
                 chatbot = gr.Chatbot(
                     value=[],
                     placeholder="输入素材描述，点击 ✨ 生成 开始创作你的2D游戏素材",
-                    height=520,
+                    height=600,
                     buttons=["copy"],
                     show_label=False,
                 )
@@ -318,7 +311,7 @@ def build_ui():
             with gr.Column(scale=3, elem_classes="preview-panel"):
                 gr.Markdown("### 🖼️ 素材在线预览")
                 preview = gr.Image(
-                    height=340,
+                    height=400,
                     show_label=False,
                     interactive=False,
                     elem_id="preview-window",
@@ -335,13 +328,15 @@ def build_ui():
                     "生成素材后点击按钮，在弹窗中选择保存位置"
                 )
 
-                gr.Markdown("### 📚 历史素材")
-                gallery = gr.Gallery(
-                    label="点击缩略图可切换预览",
-                    columns=3,
-                    height=150,
-                    object_fit="contain",
-                    allow_preview=True,
+                gr.Markdown("### 📌 使用提示")
+                gr.Markdown(
+                    """
+- **风格设置**：选择不同的画风风格，影响生成效果
+- **素材分类**：选择素材类型（角色/道具/场景等）
+- **快捷生成**：点击顶部按钮一键生成示例素材
+- **下载失败**：如果右侧预览空白，请点击对话中的链接查看
+                    """,
+                    elem_classes="tips-area",
                 )
 
         style_dd.change(on_style_change, [style_dd], [status_md]).then(
@@ -357,7 +352,7 @@ def build_ui():
 
         msg_input.change(_toggle_send_btn, [msg_input], [send_btn])
 
-        gen_outputs = [chatbot, msg_input, preview, preview_info, save_btn, gallery, send_btn]
+        gen_outputs = [chatbot, msg_input, preview, preview_info, save_btn, send_btn]
 
         send_btn.click(
             lambda: gr.update(interactive=False),
@@ -377,17 +372,12 @@ def build_ui():
             gen_outputs,
         )
 
-        gallery.select(
-            on_gallery_select,
-            outputs=[preview, preview_info, save_btn],
-        )
-
         new_btn.click(
             new_conversation,
-            outputs=[chatbot, msg_input, preview, preview_info, save_btn, gallery, status_md],
+            outputs=[chatbot, msg_input, preview, preview_info, save_btn, status_md],
         )
 
-        qg_outputs = [chatbot, msg_input, preview, preview_info, save_btn, gallery, send_btn]
+        qg_outputs = [chatbot, msg_input, preview, preview_info, save_btn, send_btn]
 
         for btn, idx in zip([ex_btn1, ex_btn2, ex_btn3, ex_btn4, ex_btn5], range(5)):
             btn.click(
@@ -438,6 +428,7 @@ def launch():
     css_text = _CSS_PATH.read_text(encoding="utf-8") if _CSS_PATH.exists() else ""
 
     try:
+        clear_current_session_dir()
         session.reset_executor()
     except EnvironmentError as e:
         demo = gr.Blocks(title="配置错误")

@@ -561,6 +561,9 @@ button.size-sm:hover, .gr-button-sm:hover {
 .main-row > div { display: flex !important; flex-direction: column !important; }
 .preview-panel > * + * { margin-top: 14px !important; }
 .preview-panel > *:first-child { margin-top: 4px !important; }
+.preview-panel .markdown, .preview-panel .preview-info {
+    padding-top: 8px !important;
+}
 .chat-panel > * + * { margin-top: 10px !important; }
 .chat-footer-area {
     flex: 1 !important; display: flex !important;
