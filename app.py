@@ -8,14 +8,14 @@ import gradio as gr
 
 from core import (
     CATEGORY_TEMPLATES,
+    CURRENT_SESSION_DIR,
     EXAMPLE_PROMPTS,
     OUTPUT_DIR,
     RANDOM_PROMPTS,
     STYLE_PRESETS,
     chat,
-    create_executor,
-    download_image,
     clear_current_session_dir,
+    create_executor,
 )
 
 _CSS_PATH = Path(__file__).parent / "style.css"
@@ -29,7 +29,6 @@ class Session:
         self.category = ""
         self.executor = None
         self.current_image: str | None = None
-        self.current_img_url: str | None = None
 
     def reset_executor(self):
         self.executor = create_executor(self.style, self.category)
@@ -57,30 +56,7 @@ def _preview_info(local_path: str | None, prompt: str = "") -> str:
     )
 
 
-def _strip_urls(reply: str) -> str:
-    text = re.sub(r"https?://\S+", "", reply).strip()
-    return text
-
-
-def _process_image(img_url: str | None, prompt: str) -> tuple[str | None, str, str | None]:
-    """下载远程图到本次会话文件夹，预览只传本地路径，失败返回URL提示。"""
-    if not img_url:
-        return None, NO_PREVIEW, None
-    session.current_img_url = img_url
-    local_path = download_image(img_url, prompt)
-    if not local_path:
-        info = (
-            f"⚠️ 图片下载到本地失败\n\n"
-            f"远程图片链接：[点击查看]({img_url})\n\n"
-            f"请尝试复制链接在浏览器查看"
-        )
-        return None, info, None
-    session.current_image = local_path
-    return local_path, _preview_info(local_path, prompt), local_path
-
-
 def _build_final_prompt(user_prompt: str, style: str, category: str) -> str:
-    """将用户的提示词和风格/分类设置融合后返回。"""
     style_hint = STYLE_PRESETS.get(style, "")
     cat_template = CATEGORY_TEMPLATES.get(category, "")
     if category and cat_template:
@@ -95,7 +71,6 @@ def _build_final_prompt(user_prompt: str, style: str, category: str) -> str:
 
 
 def respond_generator(message, history):
-    """带加载动画的响应函数（生成器模式）。"""
     if not message.strip():
         yield history, "", None, NO_PREVIEW, gr.update(interactive=False), gr.update(interactive=False)
         return
@@ -122,36 +97,38 @@ def respond_generator(message, history):
 
     try:
         session.ensure_executor()
-        reply, img_url = chat(session.executor, final_prompt)
-
-        preview_path, info, download_path = _process_image(img_url, message)
-
-        safe_reply = _strip_urls(reply)
+        reply, local_path, remote_url = chat(session.executor, final_prompt)
 
         style_label = session.style
         category_label = session.category or "通用"
         context_line = f"\n\n🎨 画风（可自定义）** {style_label}** · 📂 分类（可自定义）** {category_label}**"
 
-        if img_url:
-            url_line = f"\n\n🖼️ 远程图片：[点击查看]({img_url})"
-        else:
-            url_line = ""
-
-        if safe_reply:
-            if preview_path:
-                safe_reply += context_line + "\n\n✅ 素材已生成，请在右侧预览窗口查看"
-            else:
-                safe_reply += context_line + url_line + "\n\n⚠️ 图片下载失败，请尝试点击上方链接在浏览器查看"
-        else:
-            safe_reply = (
-                (context_line + "\n\n✅ 素材已生成，请在右侧预览窗口查看")
-                if preview_path
-                else context_line + url_line + "\n\n⚠️ 生成结果获取异常，请重试"
+        if local_path and Path(local_path).is_file():
+            session.current_image = local_path
+            preview_path = local_path
+            info = _preview_info(local_path, message)
+            download_path = local_path
+            display_reply = reply + context_line + "\n\n✅ 素材已生成，请在右侧预览窗口查看"
+        elif remote_url:
+            session.current_image = None
+            preview_path = None
+            info = (
+                f"⚠️ 图片下载到本地失败\n\n"
+                f"远程图片链接：{remote_url}\n\n"
+                f"请尝试复制链接在浏览器中打开查看"
             )
+            download_path = None
+            display_reply = reply + context_line + f"\n\n⚠️ 图片下载失败，远程链接：{remote_url}"
+        else:
+            session.current_image = None
+            preview_path = None
+            info = NO_PREVIEW
+            download_path = None
+            display_reply = reply + context_line + "\n\n⚠️ 未获取到图片，请重试"
 
         final_history = history + [
             {"role": "user", "content": message},
-            {"role": "assistant", "content": safe_reply},
+            {"role": "assistant", "content": display_reply},
         ]
         has_image = download_path is not None
 
@@ -201,7 +178,6 @@ def new_conversation():
     clear_current_session_dir()
     session.reset_executor()
     session.current_image = None
-    session.current_img_url = None
     return (
         [],
         "",
@@ -334,7 +310,7 @@ def build_ui():
 - **风格设置**：选择不同的画风风格，影响生成效果
 - **素材分类**：选择素材类型（角色/道具/场景等）
 - **快捷生成**：点击顶部按钮一键生成示例素材
-- **下载失败**：如果右侧预览空白，请点击对话中的链接查看
+- **图片存储**：图片自动保存到 `output/current_session_images/` 文件夹
                     """,
                     elem_classes="tips-area",
                 )

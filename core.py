@@ -2,12 +2,14 @@
 
 import os
 import re
+import time
 import warnings
 from datetime import datetime
 from http import HTTPStatus
 from pathlib import Path
 
 import dashscope
+import requests
 from langchain_classic.agents import AgentExecutor, create_tool_calling_agent
 from langchain_classic.memory import ConversationBufferMemory
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
@@ -142,6 +144,11 @@ RANDOM_PROMPTS = [
 OUTPUT_DIR = Path(__file__).parent / "output"
 CURRENT_SESSION_DIR = OUTPUT_DIR / "current_session_images"
 
+_last_result = {
+    "local_path": None,
+    "remote_url": None,
+}
+
 
 def get_api_key() -> str:
     key = os.environ.get("DASHSCOPE_API_KEY", "")
@@ -154,7 +161,6 @@ def get_api_key() -> str:
 
 
 def clear_current_session_dir() -> None:
-    """清空本次会话文件夹，新对话调用"""
     try:
         if CURRENT_SESSION_DIR.exists():
             for f in CURRENT_SESSION_DIR.glob("*.png"):
@@ -162,6 +168,65 @@ def clear_current_session_dir() -> None:
         CURRENT_SESSION_DIR.mkdir(parents=True, exist_ok=True)
     except Exception:
         pass
+
+
+def _safe_filename(text: str, max_len: int = 24) -> str:
+    cleaned = re.sub(r"[^\w\u4e00-\u9fff-]", "_", text.strip())
+    cleaned = re.sub(r"_+", "_", cleaned).strip("_")
+    return (cleaned or "asset")[:max_len]
+
+
+def _immediate_download(url: str, prompt: str = "asset") -> str | None:
+    CURRENT_SESSION_DIR.mkdir(parents=True, exist_ok=True)
+    safe_prompt = _safe_filename(prompt)[:30] if prompt else "asset"
+    filename = f"{datetime.now():%Y%m%d_%H%M%S}_{safe_prompt}.png"
+    filepath = CURRENT_SESSION_DIR / filename
+
+    headers_list = [
+        {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
+            "Accept": "image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.9",
+            "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8",
+            "Referer": "https://dashscope.aliyuncs.com/",
+        },
+        {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+            "Accept": "*/*",
+        },
+    ]
+
+    try:
+        api_key = get_api_key()
+        if api_key:
+            headers_list.insert(0, {
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
+                "Accept": "image/webp,image/apng,image/*,*/*;q=0.8",
+                "Authorization": f"Bearer {api_key}",
+                "Referer": "https://dashscope.aliyuncs.com/",
+            })
+    except Exception:
+        pass
+
+    for headers in headers_list:
+        for attempt in range(3):
+            try:
+                resp = requests.get(url, timeout=30, headers=headers, allow_redirects=True)
+                if resp.status_code in (403, 429) and attempt < 2:
+                    time.sleep(2 * (attempt + 1))
+                    continue
+                resp.raise_for_status()
+                if len(resp.content) < 500:
+                    time.sleep(2)
+                    continue
+                filepath.write_bytes(resp.content)
+                if filepath.stat().st_size >= 500:
+                    return str(filepath.resolve())
+                filepath.unlink(missing_ok=True)
+            except Exception:
+                if attempt < 2:
+                    time.sleep(2 * (attempt + 1))
+
+    return None
 
 
 def build_image_prompt(description: str, style: str = "像素风", category: str = "") -> str:
@@ -176,7 +241,10 @@ def build_image_prompt(description: str, style: str = "像素风", category: str
 def _make_generate_image_tool(style: str = "像素风", category: str = ""):
     @tool
     def generate_image(prompt1: str) -> str:
-        """根据文字描述生成图片，返回2D游戏素材主题的像素风图片URL。当用户需要生成图片、画图、创作图像时使用此工具。"""
+        """根据文字描述生成图片，返回2D游戏素材主题的像素风图片。当用户需要生成图片、画图、创作图像时使用此工具。"""
+        global _last_result
+        _last_result = {"local_path": None, "remote_url": None}
+
         dashscope.api_key = get_api_key()
         full_prompt = build_image_prompt(prompt1, style, category)
         full_prompt += "（注意：必须符合2D游戏风格，契合游戏素材用途）"
@@ -187,7 +255,13 @@ def _make_generate_image_tool(style: str = "像素风", category: str = ""):
             size="1024*1024",
         )
         if rsp.status_code == HTTPStatus.OK:
-            return rsp.output.results[0].url
+            img_url = rsp.output.results[0].url
+            _last_result["remote_url"] = img_url
+            local_path = _immediate_download(img_url, prompt1)
+            if local_path:
+                _last_result["local_path"] = local_path
+                return f"图片已生成并保存到本地：{local_path}"
+            return f"图片已生成，远程URL：{img_url}（但下载到本地失败）"
         return f"图片生成失败: {rsp.message}"
 
     return generate_image
@@ -224,120 +298,18 @@ def create_executor(style: str = "像素风", category: str = "") -> AgentExecut
     )
 
 
-def extract_image_url(text: str) -> str | None:
-    match = re.search(r"https?://[^\s\)\]\"']+\.(?:png|jpg|jpeg|webp|gif)", text, re.I)
-    if match:
-        return match.group(0)
-    match = re.search(r"https?://[^\s\)\]\"']+", text)
-    return match.group(0) if match else None
+def chat(executor: AgentExecutor, user_input: str) -> tuple[str, str | None, str | None]:
+    """返回 (agent文本, 本地路径, 远程URL)"""
+    global _last_result
+    _last_result = {"local_path": None, "remote_url": None}
 
-
-def chat(executor: AgentExecutor, user_input: str) -> tuple[str, str | None]:
     result = executor.invoke({"input": user_input})
     output = result.get("output", str(result))
-    return output, extract_image_url(output)
 
+    local_path = _last_result.get("local_path")
+    remote_url = _last_result.get("remote_url")
 
-def _safe_filename(text: str, max_len: int = 24) -> str:
-    cleaned = re.sub(r"[^\w\u4e00-\u9fff-]", "_", text.strip())
-    cleaned = re.sub(r"_+", "_", cleaned).strip("_")
-    return (cleaned or "asset")[:max_len]
+    if local_path and not Path(local_path).is_file():
+        local_path = None
 
-
-def download_image(url: str, prompt: str = "asset") -> str | None:
-    """从远程 URL 下载图片到本次会话文件夹，返回本地路径。带多策略重试。"""
-    import time as _time
-    import requests as _requests
-
-    CURRENT_SESSION_DIR.mkdir(parents=True, exist_ok=True)
-    safe_prompt = _safe_filename(prompt)[:30] if prompt else "asset"
-    filename = f"{datetime.now():%Y%m%d_%H%M%S}_{safe_prompt}.png"
-    filepath = CURRENT_SESSION_DIR / filename
-
-    strategy_list = [
-        {
-            "name": "browser_full",
-            "headers": {
-                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
-                "Accept": "image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.9",
-                "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8",
-                "Accept-Encoding": "gzip, deflate, br",
-                "Referer": "https://www.aliyun.com/",
-                "Connection": "keep-alive",
-                "Cache-Control": "no-cache",
-            }
-        },
-        {
-            "name": "browser_simple",
-            "headers": {
-                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-                "Accept": "*/*",
-                "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8",
-                "Referer": "https://dashscope.aliyuncs.com/",
-            }
-        },
-    ]
-
-    try:
-        api_key = get_api_key()
-        if api_key:
-            strategy_list.insert(0, {
-                "name": "auth_headers",
-                "headers": {
-                    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
-                    "Accept": "image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8",
-                    "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8",
-                    "Referer": "https://dashscope.aliyuncs.com/",
-                    "Authorization": f"Bearer {api_key}",
-                }
-            })
-    except Exception:
-        pass
-
-    for strategy in strategy_list:
-        for attempt in range(4):
-            try:
-                resp = _requests.get(url, timeout=45, headers=strategy["headers"], allow_redirects=True, stream=True)
-                if resp.status_code == 403 and attempt < 3:
-                    _time.sleep(3 * (attempt + 1))
-                    continue
-                if resp.status_code == 429 and attempt < 3:
-                    _time.sleep(6 * (attempt + 1))
-                    continue
-                resp.raise_for_status()
-                content = resp.content
-                if len(content) < 500:
-                    if attempt < 3:
-                        _time.sleep(2 * (attempt + 1))
-                        continue
-                    continue
-                filepath.write_bytes(content)
-                saved_len = filepath.stat().st_size
-                if saved_len < 500:
-                    filepath.unlink(missing_ok=True)
-                    if attempt < 3:
-                        _time.sleep(3 * (attempt + 1))
-                        continue
-                    continue
-                return str(filepath.resolve())
-            except Exception:
-                if filepath.exists():
-                    filepath.unlink(missing_ok=True)
-                if attempt < 3:
-                    _time.sleep(2 * (attempt + 1))
-
-    return None
-
-
-def save_image_as(source_path: str | None, filename: str) -> str | None:
-    """按用户指定文件名另存一份，供下载按钮使用。"""
-    if not source_path or not Path(source_path).is_file():
-        return None
-    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-    name = _safe_filename(filename, max_len=40)
-    if not name.lower().endswith(".png"):
-        name += ".png"
-    dest = OUTPUT_DIR / name
-    if dest.resolve() != Path(source_path).resolve():
-        dest.write_bytes(Path(source_path).read_bytes())
-    return str(dest.resolve())
+    return output, local_path, remote_url
