@@ -1,6 +1,6 @@
-# 🎮 2D 游戏素材 AI 生成器
+# 🎮 PixelForge
 
-基于 LangChain Agent + 阿里云 DashScope 构建的 AI 驱动 2D 游戏素材生成工具。输入文字描述，自动生成像素风、卡通、赛博朋克等多种风格的 2D 游戏素材图。
+AI 驱动的 2D 游戏素材生成器 — 基于 LangChain Agent + 阿里云 DashScope，输入文字描述，自动生成像素风、卡通、赛博朋克等多种风格的 2D 游戏素材图。
 
 ## ✨ 功能特性
 
@@ -28,7 +28,7 @@
 ## 📁 项目结构
 
 ```
-游戏2D素材生成/
+PixelForge/
 ├── agent-ok.py       # 主入口（默认 Web，--cli 终端模式）
 ├── app.py            # Gradio Web 界面
 ├── cli.py            # Rich 终端界面

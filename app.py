@@ -239,7 +239,7 @@ def random_example():
 
 
 def build_ui():
-    with gr.Blocks(title="2D 游戏素材 AI 生成器") as demo:
+    with gr.Blocks(title="PixelForge - 2D游戏素材AI生成器") as demo:
 
         gr.HTML("""
 <div id="bg-particles">
@@ -262,7 +262,7 @@ def build_ui():
 </script>
 """)
 
-        gr.Markdown("# 🎮 2D 游戏素材 AI 生成器", elem_id="main-title")
+        gr.Markdown("# 🎮 PixelForge", elem_id="main-title")
         gr.Markdown(
             "Powered by Qwen + Wanx · 生成后可在右侧实时预览，并保存到本地",
             elem_id="subtitle",

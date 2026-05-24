@@ -25,7 +25,7 @@ console = Console()
 
 BANNER = r"""
  ╔══════════════════════════════════════════════════════╗
- ║   🎮  2D 游戏素材 AI 生成器  ·  Game Asset Studio   ║
+ ║   🎮  PixelForge  ·  2D Game Asset AI Generator   ║
  ║        Powered by Qwen + Wanx · LangChain Agent      ║
  ╚══════════════════════════════════════════════════════╝
 """
