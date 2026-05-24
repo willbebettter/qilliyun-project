@@ -2,6 +2,7 @@
 
 import random
 import re
+import shutil
 from pathlib import Path
 
 import gradio as gr
@@ -70,6 +71,51 @@ def _build_final_prompt(user_prompt: str, style: str, category: str) -> str:
     return base
 
 
+def _save_with_dialog(source_path: str | None) -> str:
+    """弹出系统文件保存对话框，让用户选择保存位置。"""
+    if not source_path or not Path(source_path).is_file():
+        return "⚠️ 没有可保存的图片"
+
+    try:
+        import tkinter as tk
+        from tkinter import filedialog
+
+        root = tk.Tk()
+        root.withdraw()
+        root.attributes("-topmost", True)
+
+        src_name = Path(source_path).name
+        initial_file = src_name if src_name else "素材.png"
+
+        save_path = filedialog.asksaveasfilename(
+            title="保存素材图片",
+            initialfile=initial_file,
+            defaultextension=".png",
+            filetypes=[
+                ("PNG 图片", "*.png"),
+                ("JPEG 图片", "*.jpg"),
+                ("WebP 图片", "*.webp"),
+                ("所有文件", "*.*"),
+            ],
+        )
+        root.destroy()
+
+        if not save_path:
+            return "已取消保存"
+
+        shutil.copy2(source_path, save_path)
+        return f"✅ 已保存到：{save_path}"
+
+    except Exception as e:
+        try:
+            dest_dir = Path.home() / "Desktop"
+            dest = dest_dir / Path(source_path).name
+            shutil.copy2(source_path, str(dest))
+            return f"✅ 已保存到桌面：{dest.name}\n\n（文件保存对话框不可用，已自动保存到桌面）"
+        except Exception:
+            return f"⚠️ 保存失败：{str(e)}"
+
+
 def respond_generator(message, history):
     if not message.strip():
         yield history, "", None, NO_PREVIEW, gr.update(interactive=False), gr.update(interactive=False)
@@ -99,16 +145,12 @@ def respond_generator(message, history):
         session.ensure_executor()
         reply, local_path, remote_url = chat(session.executor, final_prompt)
 
-        style_label = session.style
-        category_label = session.category or "通用"
-        context_line = f"\n\n🎨 画风（可自定义）** {style_label}** · 📂 分类（可自定义）** {category_label}**"
-
         if local_path and Path(local_path).is_file():
             session.current_image = local_path
             preview_path = local_path
             info = _preview_info(local_path, message)
-            download_path = local_path
-            display_reply = reply + context_line + "\n\n✅ 素材已生成，请在右侧预览窗口查看"
+            url_display = remote_url if remote_url else "（本地已保存）"
+            display_reply = reply + f"\n\n🖼️ 图片链接：{url_display}\n\n✅ 素材已生成，请在右侧预览窗口查看"
         elif remote_url:
             session.current_image = None
             preview_path = None
@@ -117,27 +159,25 @@ def respond_generator(message, history):
                 f"远程图片链接：{remote_url}\n\n"
                 f"请尝试复制链接在浏览器中打开查看"
             )
-            download_path = None
-            display_reply = reply + context_line + f"\n\n⚠️ 图片下载失败，远程链接：{remote_url}"
+            display_reply = reply + f"\n\n🖼️ 图片链接：{remote_url}\n\n⚠️ 图片下载失败，请点击链接在浏览器查看"
         else:
             session.current_image = None
             preview_path = None
             info = NO_PREVIEW
-            download_path = None
-            display_reply = reply + context_line + "\n\n⚠️ 未获取到图片，请重试"
+            display_reply = reply
 
         final_history = history + [
             {"role": "user", "content": message},
             {"role": "assistant", "content": display_reply},
         ]
-        has_image = download_path is not None
+        has_image = session.current_image is not None
 
         yield (
             final_history,
             "",
             preview_path,
             info,
-            gr.update(interactive=has_image, value=download_path),
+            gr.update(interactive=has_image),
             gr.update(interactive=True),
         )
 
@@ -183,7 +223,7 @@ def new_conversation():
         "",
         None,
         NO_PREVIEW,
-        gr.update(interactive=False, value=None),
+        gr.update(interactive=False),
         "🔄 已新建对话",
     )
 
@@ -292,16 +332,20 @@ def build_ui():
                     interactive=False,
                     elem_id="preview-window",
                 )
-                preview_info = gr.Markdown(NO_PREVIEW)
+                preview_info = gr.Markdown(
+                    NO_PREVIEW,
+                    elem_id="preview-info-area",
+                )
 
                 gr.Markdown("### 💾 保存到本地")
-                save_btn = gr.DownloadButton(
-                    "💾 保存到本地",
+                save_btn = gr.Button(
+                    "💾 保存到本地（选择位置）",
                     variant="primary",
                     interactive=False,
+                    size="lg",
                 )
                 save_status = gr.Markdown(
-                    "生成素材后点击按钮，在弹窗中选择保存位置"
+                    "生成素材后点击按钮，选择保存位置"
                 )
 
                 gr.Markdown("### 📌 使用提示")
@@ -310,7 +354,8 @@ def build_ui():
 - **风格设置**：选择不同的画风风格，影响生成效果
 - **素材分类**：选择素材类型（角色/道具/场景等）
 - **快捷生成**：点击顶部按钮一键生成示例素材
-- **图片存储**：本轮对话图片自动保存到路径下的`output/current_session_images/`文件夹
+- **图片存储**：本轮对话图片自动保存到 `output/current_session_images/` 文件夹
+- **保存到本地**：点击按钮弹出系统文件对话框，可选择保存位置
                     """,
                     elem_classes="tips-area",
                 )
@@ -346,6 +391,11 @@ def build_ui():
             respond_generator,
             [msg_input, chatbot],
             gen_outputs,
+        )
+
+        save_btn.click(
+            lambda: _save_with_dialog(session.current_image),
+            outputs=[save_status],
         )
 
         new_btn.click(
