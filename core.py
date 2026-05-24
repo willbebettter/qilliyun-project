@@ -119,24 +119,6 @@ RANDOM_PROMPTS = [
     "成就徽章UI，金属质感，浮雕图案",
     "深渊恶魔Boss，熔岩裂隙，黑色羽翼",
     "水龙卷特效，蓝色水纹旋转",
-    "猫耳盗贼角色，短匕首，皮甲轻装",
-    "水晶球道具，内部闪电，底座雕花",
-    "埃及神庙场景，象形文字，黄金圣甲虫",
-    "设置齿轮UI，金属质感，旋转动画帧",
-    "冰霜女王Boss，冰晶王冠，蓝白长裙",
-    "荆棘缠绕特效，绿色尖刺藤蔓",
-    "牛仔枪手角色，宽檐帽，左轮手枪",
-    "指南针道具，罗盘造型，磁性指针",
-    "蒸汽列车场景，工业革命风，齿轮活塞",
-    "菜单按钮UI，圆形排列，木质底框",
-    "雷兽Boss，闪电环绕，独角发光",
-    "凤凰涅槃特效，火焰羽毛重生",
-    "炼金术师角色，试剂烧瓶，金属护目镜",
-    "怀表道具，镂空表盘，齿轮可见",
-    "龙巢场景，金币堆积，熔岩河流",
-    "体力槽UI，闪电图标，黄橙渐变",
-    "幽灵巫妖Boss，半透明身躯，霜冻灵气",
-    "黑洞引力特效，深紫色螺旋吸入",
     "狼人角色，银灰毛发，利爪月光",
     "望远镜道具，黄铜伸缩筒，皮革包裹",
     "水墨竹林场景，中国风，飞白笔触",
@@ -251,7 +233,7 @@ def _safe_filename(text: str, max_len: int = 24) -> str:
 
 
 def download_image(url: str, prompt: str = "asset") -> str | None:
-    """从远程 URL 下载图片到 output 目录，返回本地路径。带重试机制。"""
+    """从远程 URL 下载图片到 output 目录，返回本地路径。带多策略重试。"""
     import time as _time
     import requests as _requests
 
@@ -260,47 +242,73 @@ def download_image(url: str, prompt: str = "asset") -> str | None:
     filename = f"{datetime.now():%Y%m%d_%H%M%S}_{safe_prompt}.png"
     filepath = OUTPUT_DIR / filename
 
-    header_sets = [
-        {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
-            "Accept": "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8",
-            "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8",
-            "Referer": "https://dashscope.aliyuncs.com/",
-        },
-    ]
+    strategy_list = []
 
     try:
         api_key = get_api_key()
         if api_key:
-            header_sets.append({
-                "Authorization": f"Bearer {api_key}",
-                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
-                "Accept": "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8",
-                "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8",
-                "Referer": "https://dashscope.aliyuncs.com/",
+            strategy_list.append({
+                "name": "auth_headers",
+                "headers": {
+                    "Authorization": f"Bearer {api_key}",
+                    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
+                    "Accept": "image/webp,image/apng,image/*,*/*;q=0.8",
+                    "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8",
+                    "Referer": "https://dashscope.aliyuncs.com/",
+                }
             })
     except Exception:
         pass
 
-    for headers in header_sets:
-        for attempt in range(3):
+    strategy_list.append({
+        "name": "browser_headers",
+        "headers": {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
+            "Accept": "image/webp,image/apng,image/*,*/*;q=0.8",
+            "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8",
+            "Referer": "https://www.aliyun.com/",
+        }
+    })
+
+    strategy_list.append({
+        "name": "minimal_headers",
+        "headers": {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+            "Accept": "*/*",
+        }
+    })
+
+    for strategy in strategy_list:
+        headers = strategy["headers"]
+        for attempt in range(4):
             try:
                 resp = _requests.get(url, timeout=30, headers=headers, allow_redirects=True)
-                if resp.status_code == 403 and attempt < 2:
+                if resp.status_code == 403 and attempt < 3:
                     _time.sleep(2 * (attempt + 1))
                     continue
+                if resp.status_code == 429 and attempt < 3:
+                    _time.sleep(5 * (attempt + 1))
+                    continue
                 resp.raise_for_status()
-                if len(resp.content) < 100:
-                    if attempt < 2:
+                content_len = len(resp.content)
+                if content_len < 500:
+                    if attempt < 3:
                         _time.sleep(2 * (attempt + 1))
                         continue
                     break
                 filepath.write_bytes(resp.content)
+                saved_len = filepath.stat().st_size
+                if saved_len < 500:
+                    filepath.unlink(missing_ok=True)
+                    if attempt < 3:
+                        _time.sleep(2 * (attempt + 1))
+                        continue
+                    break
                 return str(filepath.resolve())
             except Exception:
                 if filepath.exists():
                     filepath.unlink(missing_ok=True)
-                if attempt < 2:
+                if attempt < 3:
                     _time.sleep(2 * (attempt + 1))
 
     return None

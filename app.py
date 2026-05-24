@@ -29,6 +29,7 @@ class Session:
         self.executor = None
         self.gallery: list[tuple[str, str]] = []
         self.current_image: str | None = None
+        self.current_img_url: str | None = None
 
     def reset_executor(self):
         self.executor = create_executor(self.style, self.category)
@@ -42,10 +43,10 @@ session = Session()
 
 
 def _preview_info(local_path: str | None, prompt: str = "") -> str:
-    if not local_path:
+    if not local_path or not Path(local_path).is_file():
         return NO_PREVIEW
     p = Path(local_path)
-    size_kb = p.stat().st_size // 1024 if p.is_file() else 0
+    size_kb = p.stat().st_size // 1024
     return (
         f"**{p.name}**  \n"
         f"尺寸 1024×1024 · {size_kb} KB  \n"
@@ -60,13 +61,15 @@ def _strip_urls(reply: str) -> str:
 
 
 def _process_image(img_url: str | None, prompt: str) -> tuple[str | None, str, str | None]:
-    """下载远程图到本地。返回 (预览路径/URL, 预览说明, 下载路径)。"""
+    """下载远程图到本地。预览组件永远只接收本地路径，失败时预览为 None。"""
     if not img_url:
         return None, NO_PREVIEW, None
     local_path = download_image(img_url, prompt)
     if not local_path:
-        return img_url, "⚠️ 图片下载到本地失败，展示远程预览", None
+        session.current_img_url = img_url
+        return None, f"⚠️ 图片下载到本地失败\n\n[{img_url}]({img_url})", None
     session.current_image = local_path
+    session.current_img_url = None
     return local_path, _preview_info(local_path, prompt), local_path
 
 
@@ -75,18 +78,36 @@ def _toggle_send_btn(text: str):
     return gr.update(interactive=has_content)
 
 
+def _build_final_prompt(user_prompt: str, style: str, category: str) -> str:
+    """将用户的提示词和风格/分类设置融合后返回。"""
+    style_hint = STYLE_PRESETS.get(style, "")
+    cat_template = CATEGORY_TEMPLATES.get(category, "")
+    parts = []
+    if category and cat_template:
+        parts.append(cat_template.replace("{desc}", user_prompt.strip()))
+    else:
+        parts.append(user_prompt.strip())
+    if parts and not parts[0].endswith("。"):
+        parts[0] = parts[0].rstrip(".,。") + "，"
+    if style_hint:
+        parts[0] = parts[0] + f"风格要求：{style_hint}。"
+    return "".join(parts) if parts else user_prompt
+
+
 def respond_generator(message, history):
     """带加载动画的响应函数（生成器模式）。"""
     if not message.strip():
         yield history, "", None, NO_PREVIEW, gr.update(interactive=False), session.gallery, gr.update(interactive=False)
         return
 
-    # ① 先 yield 加载态
+    final_prompt = _build_final_prompt(message, session.style, session.category)
+
     loading_history = history + [
         {"role": "user", "content": message},
         {
             "role": "assistant",
             "content": "🎨 **AI 正在生成素材中…**  \n\n"
+                       f"（融合提示词：{final_prompt[:60]}{'…' if len(final_prompt) > 60 else ''}）\n\n"
                        '<span class="loading-dots"><span></span><span></span><span></span></span>',
         },
     ]
@@ -100,17 +121,17 @@ def respond_generator(message, history):
         gr.update(interactive=False),
     )
 
-    # ② 执行实际生成，全程 try/except 兜底
     try:
         session.ensure_executor()
-        reply, img_url = chat(session.executor, message)
+        reply, img_url = chat(session.executor, final_prompt)
 
         preview_path, info, download_path = _process_image(img_url, message)
-        if preview_path and img_url and download_path:
+        if preview_path and download_path:
             session.gallery = [(preview_path, message)] + session.gallery[:11]
+        elif img_url and not preview_path:
+            session.gallery = session.gallery[:11]
 
         safe_reply = _strip_urls(reply)
-
         style_label = session.style
         category_label = session.category or "通用"
         context_line = f"\n\n🎨 画风（可自定义） **{style_label}** · 📂 分类（可自定义） **{category_label}**"
@@ -119,7 +140,7 @@ def respond_generator(message, history):
             if preview_path:
                 safe_reply += context_line + "\n\n✅ 素材已生成，请在右侧预览窗口查看。"
             else:
-                safe_reply += context_line + "\n\n⚠️ 图片下载失败，但已获取生成结果。"
+                safe_reply += context_line + "\n\n⚠️ 图片下载失败（可能因网络问题），但已获取生成结果。"
         else:
             safe_reply = (
                 (context_line + "\n\n✅ 素材已生成，请在右侧预览窗口查看。")
@@ -136,7 +157,7 @@ def respond_generator(message, history):
         yield (
             final_history,
             "",
-            preview_path if preview_path else gr.update(),
+            preview_path if preview_path else None,
             info,
             gr.update(interactive=has_image, value=download_path),
             session.gallery,
@@ -146,12 +167,12 @@ def respond_generator(message, history):
     except Exception as e:
         error_history = history + [
             {"role": "user", "content": message},
-            {"role": "assistant", "content": "❌ 生成异常，请重试"},
+            {"role": "assistant", "content": f"❌ 生成异常：{str(e)}\n\n请检查网络或 API 配置后重试。"},
         ]
         yield (
             error_history,
             "",
-            gr.update(),
+            None,
             NO_PREVIEW,
             gr.update(interactive=False),
             session.gallery,
@@ -163,6 +184,8 @@ def on_gallery_select(evt: gr.SelectData):
     if evt.index is None or evt.index >= len(session.gallery):
         return None, NO_PREVIEW, gr.update(interactive=False)
     local_path, caption = session.gallery[evt.index]
+    if not local_path or not Path(local_path).is_file():
+        return None, "⚠️ 该图片文件已丢失", gr.update(interactive=False)
     session.current_image = local_path
     return (
         local_path,
@@ -187,6 +210,7 @@ def on_category_change(category):
 def new_conversation():
     session.reset_executor()
     session.current_image = None
+    session.current_img_url = None
     return (
         [],
         "",
@@ -338,7 +362,6 @@ def build_ui():
 
         gen_outputs = [chatbot, msg_input, preview, preview_info, save_btn, gallery, send_btn]
 
-        # 生成事件 — 使用生成器模式（带 loading 动画）
         send_btn.click(
             lambda: gr.update(interactive=False),
             outputs=[send_btn],
