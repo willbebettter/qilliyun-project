@@ -177,7 +177,7 @@ def respond_generator(message, history):
             preview_path,
             info,
             gr.update(interactive=has_image),
-            gr.update(interactive=True),
+            gr.update(interactive=False),
         )
 
     except Exception as e:
@@ -191,7 +191,7 @@ def respond_generator(message, history):
             None,
             NO_PREVIEW,
             gr.update(interactive=False),
-            gr.update(interactive=True),
+            gr.update(interactive=False),
         )
 
 
@@ -272,15 +272,15 @@ def build_ui():
             with gr.Column(scale=1):
                 gr.Markdown("⚙️ **风格设置**", elem_classes="section-label")
                 style_dd = gr.Dropdown(
-                    choices=list(STYLE_PRESETS.keys()),
-                    value="像素风",
+                    choices=[f" {k}" for k in STYLE_PRESETS.keys()],
+                    value=" 像素风",
                     label="🎨 画风（可自定义）",
                 )
             with gr.Column(scale=1):
                 gr.Markdown("📂 **素材分类**", elem_classes="section-label")
                 cat_dd = gr.Dropdown(
-                    choices=["（通用）"] + list(CATEGORY_TEMPLATES.keys()),
-                    value="（通用）",
+                    choices=[" （通用）"] + [f" {k}" for k in CATEGORY_TEMPLATES.keys()],
+                    value=" （通用）",
                     label="📦 素材分类（可自定义）",
                 )
             with gr.Column(scale=2):
