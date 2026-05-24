@@ -110,13 +110,22 @@ def respond_generator(message, history):
             session.gallery = [(preview_path, message)] + session.gallery[:11]
 
         safe_reply = _strip_urls(reply)
+
+        style_label = session.style
+        category_label = session.category or "通用"
+        context_line = f"\n\n🎨 画风 **{style_label}** · 📂 分类 **{category_label}**"
+
         if safe_reply:
             if preview_path:
-                safe_reply += "\n\n✅ 素材已生成，请在右侧预览窗口查看。"
+                safe_reply += context_line + "\n\n✅ 素材已生成，请在右侧预览窗口查看。"
             else:
-                safe_reply += "\n\n⚠️ 图片下载失败，但已获取生成结果。"
+                safe_reply += context_line + "\n\n⚠️ 图片下载失败，但已获取生成结果。"
         else:
-            safe_reply = "✅ 素材已生成，请在右侧预览窗口查看。" if preview_path else "⚠️ 生成结果获取异常，请重试"
+            safe_reply = (
+                (context_line + "\n\n✅ 素材已生成，请在右侧预览窗口查看。")
+                if preview_path
+                else context_line + "\n\n⚠️ 生成结果获取异常，请重试"
+            )
 
         final_history = history + [
             {"role": "user", "content": message},

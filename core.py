@@ -260,14 +260,18 @@ def download_image(url: str, prompt: str = "asset") -> str | None:
     filename = f"{datetime.now():%Y%m%d_%H%M%S}_{safe_prompt}.png"
     filepath = OUTPUT_DIR / filename
 
+    try:
+        api_key = get_api_key()
+    except Exception:
+        api_key = ""
     headers = {
+        "Authorization": f"Bearer {api_key}",
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
         "Accept": "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8",
         "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8",
         "Referer": "https://dashscope.aliyuncs.com/",
     }
 
-    last_error = None
     for attempt in range(3):
         try:
             resp = _requests.get(url, timeout=30, headers=headers)
@@ -280,8 +284,7 @@ def download_image(url: str, prompt: str = "asset") -> str | None:
                 filepath.unlink(missing_ok=True)
                 return None
             return str(filepath.resolve())
-        except Exception as exc:
-            last_error = exc
+        except Exception:
             if filepath.exists():
                 filepath.unlink(missing_ok=True)
             if attempt < 2:
