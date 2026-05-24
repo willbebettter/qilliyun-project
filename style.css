@@ -15,7 +15,7 @@ body, html {
 footer { display: none !important; }
 
 /* ============================================================
-   背景动效 ① — 极光波浪（多层渐变带，永不露边）
+   背景动效 ① — 极光波浪
    ============================================================ */
 body::before {
     content: '';
@@ -56,7 +56,7 @@ body::before {
 }
 
 /* ============================================================
-   背景动效 ② — 光束射线（旋转+脉冲）
+   背景动效 ② — 光束射线旋转
    ============================================================ */
 body::after {
     content: '';
@@ -74,7 +74,7 @@ body::after {
 }
 
 /* ============================================================
-   背景动效 ③ — 密集星空粒子（独立闪烁）
+   背景动效 ③ — 星空闪烁
    ============================================================ */
 .gradio-container::before {
     content: '';
@@ -180,26 +180,33 @@ body::after {
    ============================================================ */
 .chat-panel, .preview-panel, .settings-row {
     background: rgba(255,255,255,0.025) !important;
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
     border: 1px solid rgba(255,255,255,0.07) !important;
     border-radius: 16px !important;
     padding: 18px !important;
     position: relative;
     z-index: 2;
+    overflow: visible !important;
     box-shadow: 0 8px 32px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.03) !important;
     transition: border-color 0.4s ease, box-shadow 0.4s ease;
 }
-.chat-panel:hover, .preview-panel:hover, .settings-row:hover {
-    border-color: rgba(255,255,255,0.12) !important;
-    box-shadow: 0 8px 32px rgba(0,0,0,0.35), 0 0 45px rgba(100,50,200,0.07), inset 0 1px 0 rgba(255,255,255,0.04) !important;
+
+/* 对话和预览面板用 backdrop-filter 做毛玻璃 */
+.chat-panel, .preview-panel {
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
 }
 
-/* 设置行 — 紧凑 */
+/* 设置行 — 不能有 backdrop-filter（会困住下拉框），用深色半透明代替 */
 .settings-row {
+    background: rgba(12, 12, 30, 0.92) !important;
     margin-bottom: 12px !important;
     align-items: end !important;
     padding: 12px 18px !important;
+}
+
+.chat-panel:hover, .preview-panel:hover, .settings-row:hover {
+    border-color: rgba(255,255,255,0.12) !important;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.35), 0 0 45px rgba(100,50,200,0.07), inset 0 1px 0 rgba(255,255,255,0.04) !important;
 }
 
 /* ============================================================
@@ -216,24 +223,25 @@ body::after {
 }
 
 /* ============================================================
-   下拉框 — 最高层级，确保不被遮挡
+   下拉框 — 最高层级
    ============================================================ */
 .gr-dropdown {
     position: relative !important;
-    z-index: 99999 !important;
+    z-index: 100000 !important;
 }
 .gr-dropdown [class*="select-wrap"],
 .gr-dropdown [class*="wrap"] {
     overflow: visible !important;
     position: relative !important;
-    z-index: 99999 !important;
+    z-index: 100000 !important;
 }
 .gr-dropdown ul,
 .gr-dropdown [class*="dropdown"],
 .gr-dropdown [class*="select"] ul,
 .gr-dropdown [class*="options"],
 .gr-dropdown [class*="listbox"],
-.gr-dropdown [role="listbox"] {
+.gr-dropdown [role="listbox"],
+.gr-dropdown [class*="popup"] {
     background: #16162a !important;
     border: 1px solid rgba(255,255,255,0.15) !important;
     border-radius: 12px !important;
@@ -333,9 +341,16 @@ label, .gr-input-label {
     opacity: 0.7 !important;
 }
 
-/* 加载动画消息 */
-.loading-msg .message-wrap {
-    display: flex; align-items: center; gap: 10px;
+/* 加载动画 */
+.loading-msg {
+    display: flex !important;
+    align-items: center !important;
+    gap: 10px !important;
+    padding: 12px 18px !important;
+}
+.loading-dots {
+    display: inline-flex !important;
+    gap: 6px !important;
 }
 .loading-dots span {
     display: inline-block;
@@ -374,7 +389,6 @@ input::placeholder, textarea::placeholder {
     color: rgba(255,255,255,0.2) !important;
 }
 
-/* Chat 输入框 */
 #chat-input textarea {
     font-size: 15px !important;
     line-height: 1.55 !important;
@@ -393,7 +407,6 @@ button, .gr-button {
     cursor: pointer !important;
 }
 
-/* 主按钮 */
 .gr-button-primary {
     background: linear-gradient(135deg, #8b5cf6, #6366f1) !important;
     border: none !important;
@@ -428,7 +441,6 @@ button, .gr-button {
     50%      { box-shadow: 0 2px 20px rgba(139,92,246,0.5); }
 }
 
-/* 次按钮 */
 .gr-button-secondary {
     background: rgba(255,255,255,0.05) !important;
     border: 1px solid rgba(255,255,255,0.1) !important;
@@ -443,7 +455,6 @@ button, .gr-button {
     background: rgba(139,92,246,0.18) !important;
 }
 
-/* 小按钮 */
 button.size-sm, .gr-button-sm {
     border-radius: 10px !important;
     cursor: pointer !important;
@@ -456,7 +467,6 @@ button.size-sm:active, .gr-button-sm:active {
     background: rgba(139,92,246,0.18) !important;
 }
 
-/* Download 按钮 */
 .gr-download-button {
     background: linear-gradient(135deg, #059669, #047857) !important;
     border: none !important;
@@ -496,7 +506,7 @@ button.size-sm:active, .gr-button-sm:active {
 .preview-panel > * + * { margin-top: 12px !important; }
 .chat-panel > * + *    { margin-top: 10px !important; }
 
-/* 左侧对话面板底部填充区 */
+/* 底部填充区 */
 .chat-footer-area {
     flex: 1 !important;
     display: flex !important;
@@ -509,7 +519,6 @@ button.size-sm:active, .gr-button-sm:active {
     opacity: 0.45 !important;
 }
 
-/* 功能分区标签 */
 .section-label {
     color: #6366f1 !important;
     font-size: 0.72rem !important;

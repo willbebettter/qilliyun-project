@@ -20,8 +20,6 @@ _CSS_PATH = Path(__file__).parent / "style.css"
 
 NO_PREVIEW = "🎨 素材将在此处实时预览\n\n*在左侧输入描述后点击「生成」开始创作*"
 
-LOADING_MSG = "🎨 **AI 正在生成素材中…**\n\n<span class='loading-dots'><span></span><span></span><span></span></span>"
-
 
 class Session:
     def __init__(self):
@@ -77,10 +75,47 @@ def _toggle_send_btn(text: str):
     return gr.update(interactive=has_content)
 
 
-def respond(message, history):
-    if not message.strip():
-        return history, "", None, NO_PREVIEW, gr.update(interactive=False), session.gallery, gr.update(interactive=False)
+def _yield_final(history, preview_path, info, download_path, has_image, reply):
+    """统一生成最终结果，包括 loading 过渡 + 最终态。"""
+    has_image = download_path is not None
 
+    yield (
+        history,
+        "",
+        preview_path,
+        info,
+        gr.update(interactive=has_image, value=download_path),
+        session.gallery,
+        gr.update(interactive=True),
+    )
+
+
+def respond_generator(message, history):
+    """带加载动画的响应函数（生成器模式）。"""
+    if not message.strip():
+        yield history, "", None, NO_PREVIEW, gr.update(interactive=False), session.gallery, gr.update(interactive=False)
+        return
+
+    # ① 先 yield 加载态
+    loading_history = history + [
+        {"role": "user", "content": message},
+        {
+            "role": "assistant",
+            "content": "🎨 **AI 正在生成素材中…**  \n\n"
+                       '<span class="loading-dots"><span></span><span></span><span></span></span>',
+        },
+    ]
+    yield (
+        loading_history,
+        "",
+        None,
+        NO_PREVIEW,
+        gr.update(interactive=False),
+        session.gallery,
+        gr.update(interactive=False),
+    )
+
+    # ② 执行实际生成
     session.ensure_executor()
     try:
         reply, img_url = chat(session.executor, message)
@@ -92,13 +127,15 @@ def respond(message, history):
         session.gallery = [(preview_path, message)] + session.gallery[:11]
         reply = _clean_reply(reply) if not reply.startswith("❌") else reply
 
-    history = history + [
+    final_history = history + [
         {"role": "user", "content": message},
         {"role": "assistant", "content": reply},
     ]
     has_image = download_path is not None
-    return (
-        history,
+
+    # ③ yield 最终态
+    yield (
+        final_history,
         "",
         preview_path,
         info,
@@ -149,8 +186,13 @@ def new_conversation():
 
 def quick_generate(prompt_text: str, history):
     if not prompt_text.strip():
-        return history, "", None, NO_PREVIEW, gr.update(interactive=False), session.gallery, gr.update(interactive=True)
-    return respond(prompt_text, history)
+        yield history, "", None, NO_PREVIEW, gr.update(interactive=False), session.gallery, gr.update(interactive=True)
+        return
+    yield from respond_generator(prompt_text, history)
+
+
+def random_example():
+    return random.choice(EXAMPLE_PROMPTS)
 
 
 def build_ui():
@@ -162,6 +204,19 @@ def build_ui():
   <div class="p"></div><div class="p"></div><div class="p"></div>
   <div class="p"></div><div class="p"></div>
 </div>
+""")
+
+        gr.HTML("""
+<script>
+(function() {
+  var tid = setInterval(function() {
+    document.querySelectorAll('.settings-row .wrap, .settings-row .gr-dropdown').forEach(function(el) {
+      el.style.overflow = 'visible';
+    });
+  }, 500);
+  setTimeout(function() { clearInterval(tid); }, 15000);
+})();
+</script>
 """)
 
         gr.Markdown("# 🎮 2D 游戏素材 AI 生成器", elem_id="main-title")
@@ -196,7 +251,7 @@ def build_ui():
                     rand_btn = gr.Button("🎲 随机", size="sm", variant="secondary")
             with gr.Column(scale=1):
                 status_md = gr.Markdown("当前：**像素风** · **通用**")
-                new_btn = gr.Button("🆕 新建对话", size="sm", variant="secondary")
+                new_btn = gr.Button("🆕 新建对话", variant="secondary")
 
         with gr.Row(elem_classes="main-row"):
             with gr.Column(scale=5, elem_classes="chat-panel"):
@@ -269,11 +324,12 @@ def build_ui():
 
         gen_outputs = [chatbot, msg_input, preview, preview_info, save_btn, gallery, send_btn]
 
+        # 生成事件 — 使用生成器模式（带 loading 动画）
         send_btn.click(
             lambda: gr.update(interactive=False),
             outputs=[send_btn],
         ).then(
-            respond,
+            respond_generator,
             [msg_input, chatbot],
             gen_outputs,
         )
@@ -282,7 +338,7 @@ def build_ui():
             lambda: gr.update(interactive=False),
             outputs=[send_btn],
         ).then(
-            respond,
+            respond_generator,
             [msg_input, chatbot],
             gen_outputs,
         )
