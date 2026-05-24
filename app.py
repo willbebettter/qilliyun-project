@@ -6,7 +6,6 @@ import time
 from pathlib import Path
 
 import gradio as gr
-import requests
 
 from core import (
     CATEGORY_TEMPLATES,
@@ -17,12 +16,11 @@ from core import (
     chat,
     create_executor,
     download_image,
-    get_api_key,
 )
 
 _CSS_PATH = Path(__file__).parent / "style.css"
 
-NO_PREVIEW = "🎨 暂无生成的素材\n\n*在左侧输入描述后点击「生成」开始创作*"
+NO_PREVIEW = "🎨 素材将在此处实时预览\n\n*在左侧输入描述后点击「生成」开始创作*"
 
 
 class Session:
@@ -30,7 +28,8 @@ class Session:
         self.style = "像素风"
         self.category = ""
         self.executor = None
-        self.history: list[tuple[str, str, str | None]] = []
+        self.gallery: list[tuple[str, str]] = []
+        self.current_image: str | None = None
 
     def reset_executor(self):
         self.executor = create_executor(self.style, self.category)
@@ -43,9 +42,35 @@ class Session:
 session = Session()
 
 
+def _preview_info(local_path: str | None, prompt: str = "") -> str:
+    if not local_path:
+        return NO_PREVIEW
+    p = Path(local_path)
+    if not p.is_file():
+        return NO_PREVIEW
+    size_kb = p.stat().st_size // 1024
+    return (
+        f"**{p.name}**  \n"
+        f"尺寸 1024×1024 · {size_kb} KB  \n"
+        f"描述：{prompt or '—'}  \n"
+        f"💡 点击图片可全屏查看"
+    )
+
+
 def _strip_urls(reply: str) -> str:
     text = re.sub(r"https?://\S+", "", reply).strip()
     return text
+
+
+def _process_image(img_url: str | None, prompt: str) -> tuple[str | None, str, str | None]:
+    """下载远程图到本地，预览只传本地路径，失败返回 None 让 gr.Image 显示占位符。"""
+    if not img_url:
+        return None, NO_PREVIEW, None
+    local_path = download_image(img_url, prompt)
+    if not local_path:
+        return None, f"⚠️ 图片下载到本地失败\n\n请尝试检查网络连接后重试", None
+    session.current_image = local_path
+    return local_path, _preview_info(local_path, prompt), local_path
 
 
 def _build_final_prompt(user_prompt: str, style: str, category: str) -> str:
@@ -63,57 +88,89 @@ def _build_final_prompt(user_prompt: str, style: str, category: str) -> str:
     return base
 
 
-def _download_for_save(img_url: str) -> bytes | None:
-    """直接下载图片字节数据，用于保存。返回 bytes 或 None。"""
-    strategy_list = []
+def respond_generator(message, history):
+    """带加载动画的响应函数（生成器模式）。"""
+    if not message.strip():
+        yield history, "", None, NO_PREVIEW, gr.update(interactive=False), session.gallery, gr.update(interactive=False)
+        return
+
+    final_prompt = _build_final_prompt(message, session.style, session.category)
+
+    loading_history = history + [
+        {"role": "user", "content": message},
+        {
+            "role": "assistant",
+            "content": "🎨 **AI 正在生成素材中…**  \n\n"
+            f"（融合提示词：{final_prompt[:80]}{'…' if len(final_prompt) > 80 else ''}）  \n\n"
+            '<span class="loading-dots"><span></span><span></span><span></span></span>',
+        },
+    ]
+    yield (
+        loading_history,
+        "",
+        None,
+        NO_PREVIEW,
+        gr.update(interactive=False),
+        session.gallery,
+        gr.update(interactive=False),
+    )
 
     try:
-        api_key = get_api_key()
-        if api_key:
-            strategy_list.append({
-                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
-                "Accept": "image/webp,image/apng,image/*,*/*;q=0.8",
-                "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8",
-                "Referer": "https://dashscope.aliyuncs.com/",
-                "Authorization": f"Bearer {api_key}",
-            })
-    except Exception:
-        pass
+        session.ensure_executor()
+        reply, img_url = chat(session.executor, final_prompt)
 
-    strategy_list.append({
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
-        "Accept": "image/webp,image/apng,image/*,*/*;q=0.8",
-        "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8",
-        "Referer": "https://www.aliyun.com/",
-    })
+        preview_path, info, download_path = _process_image(img_url, message)
+        if preview_path and img_url and download_path:
+            session.gallery = [(preview_path, message)] + session.gallery[:11]
 
-    strategy_list.append({
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-        "Accept": "*/*",
-    })
+        safe_reply = _strip_urls(reply)
 
-    for headers in strategy_list:
-        for attempt in range(3):
-            try:
-                resp = requests.get(img_url, timeout=30, headers=headers, allow_redirects=True)
-                if resp.status_code == 403 and attempt < 2:
-                    time.sleep(2 * (attempt + 1))
-                    continue
-                if resp.status_code == 429 and attempt < 2:
-                    time.sleep(5 * (attempt + 1))
-                    continue
-                resp.raise_for_status()
-                if len(resp.content) < 500:
-                    if attempt < 2:
-                        time.sleep(2 * (attempt + 1))
-                        continue
-                    break
-                return resp.content
-            except Exception:
-                if attempt < 2:
-                    time.sleep(2 * (attempt + 1))
+        style_label = session.style
+        category_label = session.category or "通用"
+        context_line = f"\n\n🎨 画风（可自定义） **{style_label}** · 📂 分类（可自定义） **{category_label}**"
 
-    return None
+        if safe_reply:
+            if preview_path:
+                safe_reply += context_line + "\n\n✅ 素材已生成，请在右侧预览窗口查看"
+            else:
+                safe_reply += context_line + "\n\n⚠️ 图片下载失败，但已获取生成结果，请稍后重试下载"
+        else:
+            safe_reply = (
+                (context_line + "\n\n✅ 素材已生成，请在右侧预览窗口查看")
+                if preview_path
+                else context_line + "\n\n⚠️ 生成结果获取异常，请重试"
+            )
+
+        final_history = history + [
+            {"role": "user", "content": message},
+            {"role": "assistant", "content": safe_reply},
+        ]
+        has_image = download_path is not None
+
+        yield (
+            final_history,
+            "",
+            preview_path,
+            info,
+            gr.update(interactive=has_image, value=download_path),
+            session.gallery,
+            gr.update(interactive=True),
+        )
+
+    except Exception as e:
+        error_history = history + [
+            {"role": "user", "content": message},
+            {"role": "assistant", "content": f"❌ 生成异常：{str(e)}\n\n请检查网络或 API 配置后重试"},
+        ]
+        yield (
+            error_history,
+            "",
+            None,
+            NO_PREVIEW,
+            gr.update(interactive=False),
+            session.gallery,
+            gr.update(interactive=True),
+        )
 
 
 def _toggle_send_btn(text: str):
@@ -121,105 +178,18 @@ def _toggle_send_btn(text: str):
     return gr.update(interactive=has_content)
 
 
-def _format_ai_response(reply: str, img_url: str | None, style: str, category: str) -> str:
-    """格式化 AI 回复，包含可点击的图片链接。"""
-    style_label = style
-    category_label = category or "通用"
-    context_line = f"🎨 画风（可自定义） **{style_label}** · 📂 分类（可自定义） **{category_label}**"
-
-    if img_url:
-        link_markdown = f"\n\n🖼️ **生成结果**：[点击在新窗口查看图片]({img_url})"
-        return f"{reply}\n\n{context_line}{link_markdown}"
-    else:
-        return f"{reply}\n\n{context_line}\n\n⚠️ 未获取到图片 URL，请重试"
-
-
-def respond_generator(message, history):
-    """带加载动画的响应函数（生成器模式）。"""
-    if not message.strip():
-        return
-
-    final_prompt = _build_final_prompt(message, session.style, session.category)
-
-    loading_user = message
-    loading_bot = (
-        "🎨 **AI 正在生成素材中…**  \n\n"
-        f"（融合提示词：{final_prompt[:80]}{'…' if len(final_prompt) > 80 else ''}）  \n\n"
-        '<span class="loading-dots"><span></span><span></span><span></span></span>'
+def on_gallery_select(evt: gr.SelectData):
+    if evt.index is None or evt.index >= len(session.gallery):
+        return None, NO_PREVIEW, gr.update(interactive=False)
+    local_path, caption = session.gallery[evt.index]
+    if not local_path or not Path(local_path).is_file():
+        return None, NO_PREVIEW, gr.update(interactive=False)
+    session.current_image = local_path
+    return (
+        local_path,
+        _preview_info(local_path, caption),
+        gr.update(interactive=True, value=local_path),
     )
-
-    yield (
-        history + [(loading_user, loading_bot)],
-        "",
-        gr.update(interactive=False),
-        gr.update(interactive=False),
-        gr.update(interactive=False),
-        NO_PREVIEW,
-        None,
-        "",
-    )
-
-    try:
-        session.ensure_executor()
-        reply, img_url = chat(session.executor, final_prompt)
-
-        safe_reply = _strip_urls(reply)
-        formatted = _format_ai_response(safe_reply, img_url, session.style, session.category)
-
-        session.history.append((message, formatted, img_url))
-
-        has_url = img_url is not None
-
-        info_text = (
-            f"✅ 素材已生成！\n\n"
-            f"描述：{message}\n\n"
-            f"风格：{session.style} · 分类：{session.category or '通用'}\n\n"
-            f"点击下方「💾 下载图片到本地」按钮保存"
-            if img_url else
-            f"⚠️ 未获取到图片 URL\n\n描述：{message}\n\n请尝试重新生成"
-        )
-
-        yield (
-            history + [(message, formatted)],
-            "",
-            gr.update(interactive=has_url),
-            gr.update(interactive=has_url),
-            gr.update(interactive=True),
-            info_text,
-            img_url,
-            message,
-        )
-
-    except Exception as e:
-        error_msg = f"❌ 生成异常：{str(e)}\n\n请检查网络或 API 配置后重试。"
-        yield (
-            history + [(message, error_msg)],
-            "",
-            gr.update(interactive=False),
-            gr.update(interactive=False),
-            gr.update(interactive=False),
-            f"❌ 发生错误\n\n{str(e)[:100]}",
-            None,
-            "",
-        )
-
-
-def _save_handler(img_url: str, prompt: str) -> str:
-    """下载按钮回调：下载图片到本地，返回保存状态文字。"""
-    if not img_url:
-        return "⚠️ 没有可下载的图片，请先生成素材"
-    local_path = download_image(img_url, prompt)
-    if local_path and Path(local_path).is_file():
-        return f"✅ 已保存到：{Path(local_path).name}"
-    img_bytes = _download_for_save(img_url)
-    if img_bytes:
-        OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-        safe = re.sub(r"[^\w\u4e00-\u9fff-]", "_", (prompt or "asset").strip())[:24] or "asset"
-        filename = f"asset_{safe}.png"
-        filepath = OUTPUT_DIR / filename
-        filepath.write_bytes(img_bytes)
-        return f"✅ 已保存到：{filepath.name}"
-    return "⚠️ 下载失败，请检查网络后重试"
 
 
 def on_style_change(style):
@@ -237,21 +207,21 @@ def on_category_change(category):
 
 def new_conversation():
     session.reset_executor()
-    session.history.clear()
+    session.current_image = None
     return (
         [],
         "",
-        gr.update(interactive=False),
-        gr.update(interactive=False),
-        gr.update(interactive=False),
-        NO_PREVIEW,
         None,
-        "",
+        NO_PREVIEW,
+        gr.update(interactive=False, value=None),
+        session.gallery,
+        "🔄 已新建对话",
     )
 
 
 def quick_generate(prompt_text: str, history):
     if not prompt_text.strip():
+        yield history, "", None, NO_PREVIEW, gr.update(interactive=False), session.gallery, gr.update(interactive=True)
         return
     yield from respond_generator(prompt_text, history)
 
@@ -286,7 +256,7 @@ def build_ui():
 
         gr.Markdown("# 🎮 2D 游戏素材 AI 生成器", elem_id="main-title")
         gr.Markdown(
-            "Powered by Qwen + Wanx · 图片链接直接在对话中展示，点击即可查看",
+            "Powered by Qwen + Wanx · 生成后可在右侧实时预览，并保存到本地",
             elem_id="subtitle",
         )
 
@@ -318,16 +288,13 @@ def build_ui():
                 status_md = gr.Markdown("当前：**像素风** · **通用**")
                 new_btn = gr.Button("🆕 新建对话", variant="secondary")
 
-        latest_img_url = gr.Textbox(label="", visible=False, lines=1)
-        latest_prompt = gr.Textbox(label="", visible=False, lines=1)
-
         with gr.Row(elem_classes="main-row"):
             with gr.Column(scale=5, elem_classes="chat-panel"):
                 gr.Markdown("### 💬 对话区")
                 chatbot = gr.Chatbot(
                     value=[],
                     placeholder="输入素材描述，点击 ✨ 生成 开始创作你的2D游戏素材",
-                    height=560,
+                    height=520,
                     buttons=["copy"],
                     show_label=False,
                 )
@@ -349,23 +316,33 @@ def build_ui():
                 )
 
             with gr.Column(scale=3, elem_classes="preview-panel"):
-                gr.Markdown("### 💾 保存到本地")
-                gr.Markdown(
-                    "生成后点击下方按钮下载图片到本地",
-                    elem_classes="section-label",
+                gr.Markdown("### 🖼️ 素材在线预览")
+                preview = gr.Image(
+                    height=340,
+                    show_label=False,
+                    interactive=False,
+                    elem_id="preview-window",
                 )
-                save_btn = gr.Button(
-                    "💾 下载图片到本地",
+                preview_info = gr.Markdown(NO_PREVIEW)
+
+                gr.Markdown("### 💾 保存到本地")
+                save_btn = gr.DownloadButton(
+                    "💾 保存到本地",
                     variant="primary",
                     interactive=False,
-                    size="lg",
                 )
-                download_status = gr.Markdown(
-                    "请先在左侧生成素材，生成后点击上方按钮下载"
+                save_status = gr.Markdown(
+                    "生成素材后点击按钮，在弹窗中选择保存位置"
                 )
 
-                gr.Markdown("### 📌 当前状态")
-                preview_info = gr.Markdown(NO_PREVIEW)
+                gr.Markdown("### 📚 历史素材")
+                gallery = gr.Gallery(
+                    label="点击缩略图可切换预览",
+                    columns=3,
+                    height=150,
+                    object_fit="contain",
+                    allow_preview=True,
+                )
 
         style_dd.change(on_style_change, [style_dd], [status_md]).then(
             lambda s, c: f"当前：**{s}** · **{c if c != '（通用）' else '通用'}**",
@@ -380,10 +357,7 @@ def build_ui():
 
         msg_input.change(_toggle_send_btn, [msg_input], [send_btn])
 
-        gen_outputs = [
-            chatbot, msg_input, save_btn, download_status, send_btn, preview_info,
-            latest_img_url, latest_prompt,
-        ]
+        gen_outputs = [chatbot, msg_input, preview, preview_info, save_btn, gallery, send_btn]
 
         send_btn.click(
             lambda: gr.update(interactive=False),
@@ -403,24 +377,17 @@ def build_ui():
             gen_outputs,
         )
 
-        save_btn.click(
-            _save_handler,
-            [latest_img_url, latest_prompt],
-            [download_status],
+        gallery.select(
+            on_gallery_select,
+            outputs=[preview, preview_info, save_btn],
         )
 
         new_btn.click(
             new_conversation,
-            outputs=[
-                chatbot, msg_input, save_btn, download_status, send_btn, preview_info,
-                latest_img_url, latest_prompt,
-            ],
+            outputs=[chatbot, msg_input, preview, preview_info, save_btn, gallery, status_md],
         )
 
-        qg_outputs = [
-            chatbot, msg_input, save_btn, download_status, send_btn, preview_info,
-            latest_img_url, latest_prompt,
-        ]
+        qg_outputs = [chatbot, msg_input, preview, preview_info, save_btn, gallery, send_btn]
 
         for btn, idx in zip([ex_btn1, ex_btn2, ex_btn3, ex_btn4, ex_btn5], range(5)):
             btn.click(
