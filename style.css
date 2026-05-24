@@ -128,21 +128,20 @@ body::after {
 #bg-particles .p {
     position: absolute;
     border-radius: 50%;
-    animation: particleFloat var(--dur) ease-in-out infinite alternate;
-    animation-delay: var(--del);
+    animation: particleFloat 14s ease-in-out infinite alternate;
 }
-#bg-particles .p:nth-child(1)  { width:4px;height:4px;background:rgba(139,92,246,0.25);left:10%;top:15%;--dur:12s;--del:0s; }
-#bg-particles .p:nth-child(2)  { width:3px;height:3px;background:rgba(59,130,246,0.2); left:80%;top:25%;--dur:15s;--del:-3s;}
-#bg-particles .p:nth-child(3)  { width:5px;height:5px;background:rgba(236,72,153,0.15);left:45%;top:70%;--dur:18s;--del:-6s;}
-#bg-particles .p:nth-child(4)  { width:3px;height:3px;background:rgba(6,182,212,0.22);left:70%;top:60%;--dur:14s;--del:-2s;}
-#bg-particles .p:nth-child(5)  { width:4px;height:4px;background:rgba(168,85,247,0.18);left:25%;top:80%;--dur:16s;--del:-8s;}
-#bg-particles .p:nth-child(6)  { width:2px;height:2px;background:rgba(99,102,241,0.25);left:90%;top:8%; --dur:11s;--del:-4s;}
-#bg-particles .p:nth-child(7)  { width:4px;height:4px;background:rgba(139,92,246,0.16);left:55%;top:35%;--dur:20s;--del:-10s;}
-#bg-particles .p:nth-child(8)  { width:3px;height:3px;background:rgba(59,130,246,0.2); left:15%;top:50%;--dur:13s;--del:-5s;}
+#bg-particles .p:nth-child(1)  { width:4px;height:4px;background:rgba(139,92,246,0.25);left:10%;top:15%; animation-delay:0s; }
+#bg-particles .p:nth-child(2)  { width:3px;height:3px;background:rgba(59,130,246,0.2); left:80%;top:25%; animation-delay:-3s; }
+#bg-particles .p:nth-child(3)  { width:5px;height:5px;background:rgba(236,72,153,0.15);left:45%;top:70%; animation-delay:-6s; }
+#bg-particles .p:nth-child(4)  { width:3px;height:3px;background:rgba(6,182,212,0.22);left:70%;top:60%; animation-delay:-2s; }
+#bg-particles .p:nth-child(5)  { width:4px;height:4px;background:rgba(168,85,247,0.18);left:25%;top:80%; animation-delay:-8s; }
+#bg-particles .p:nth-child(6)  { width:2px;height:2px;background:rgba(99,102,241,0.25);left:90%;top:8%; animation-delay:-4s; }
+#bg-particles .p:nth-child(7)  { width:4px;height:4px;background:rgba(139,92,246,0.16);left:55%;top:35%; animation-delay:-10s; }
+#bg-particles .p:nth-child(8)  { width:3px;height:3px;background:rgba(59,130,246,0.2); left:15%;top:50%; animation-delay:-5s; }
 @keyframes particleFloat {
     0%   { transform: translate(0, 0) scale(1); opacity: 0.3; }
     50%  { opacity: 0.8; }
-    100% { transform: translate(var(--tx, 30px), var(--ty, -40px)) scale(1.5); opacity: 0.2; }
+    100% { transform: translate(30px, -40px) scale(1.5); opacity: 0.2; }
 }
 
 /* 面板在动效之上 */

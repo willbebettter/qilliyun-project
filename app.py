@@ -5,7 +5,6 @@ import re
 from pathlib import Path
 
 import gradio as gr
-from PIL import Image
 
 from core import (
     CATEGORY_TEMPLATES,
@@ -62,19 +61,15 @@ def _clean_reply(reply: str) -> str:
     return "✅ 素材已生成，请在右侧预览窗口查看。"
 
 
-def _process_image(img_url: str | None, prompt: str) -> tuple[Image.Image | str | None, str, str | None]:
-    """下载远程图到本地，返回 (PIL图/None, 预览说明, 下载路径)。"""
+def _process_image(img_url: str | None, prompt: str) -> tuple[str | None, str, str | None]:
+    """下载远程图到本地。返回 (本地路径 或 None, 预览说明, 下载路径)。"""
     if not img_url:
         return None, NO_PREVIEW, None
     local_path = download_image(img_url, prompt)
     if not local_path:
-        return None, "⚠️ 图片下载失败，请重试", None
+        return None, "⚠️ 图片下载到本地失败", None
     session.current_image = local_path
-    try:
-        pil_image = Image.open(local_path).convert("RGBA")
-    except Exception:
-        return local_path, _preview_info(local_path, prompt), local_path
-    return pil_image, _preview_info(local_path, prompt), local_path
+    return local_path, _preview_info(local_path, prompt), local_path
 
 
 def _toggle_send_btn(text: str):
@@ -139,12 +134,13 @@ def respond_generator(message, history):
         {"role": "assistant", "content": reply},
     ]
     has_image = download_path is not None
+    display_value = img_url if img_url else preview_path
 
-    # ③ yield 最终态
+    # ③ yield 最终态 — 预览优先用远程 URL（浏览器直接加载）
     yield (
         final_history,
         "",
-        gr.update(value=preview_path),
+        display_value,
         info,
         gr.update(interactive=has_image, value=download_path),
         session.gallery,
@@ -157,12 +153,8 @@ def on_gallery_select(evt: gr.SelectData):
         return None, NO_PREVIEW, gr.update(interactive=False)
     local_path, caption = session.gallery[evt.index]
     session.current_image = local_path
-    try:
-        pil_image = Image.open(local_path).convert("RGBA")
-    except Exception:
-        pil_image = local_path
     return (
-        pil_image,
+        local_path,
         _preview_info(local_path, caption),
         gr.update(interactive=True, value=local_path),
     )
@@ -259,7 +251,7 @@ def build_ui():
                     ex_btn3 = gr.Button("🌲 场景", size="sm", variant="secondary")
                     ex_btn4 = gr.Button("🪙 金币", size="sm", variant="secondary")
                     ex_btn5 = gr.Button("💀 Boss", size="sm", variant="secondary")
-                    rand_btn = gr.Button("🎲 随机", size="sm", variant="secondary")
+                    rand_btn = gr.Button("🎲 随机 (100+精美提示词模板)", size="sm", variant="secondary")
             with gr.Column(scale=1):
                 status_md = gr.Markdown("当前：**像素风** · **通用**")
                 new_btn = gr.Button("🆕 新建对话", variant="secondary")
@@ -294,7 +286,6 @@ def build_ui():
             with gr.Column(scale=3, elem_classes="preview-panel"):
                 gr.Markdown("### 🖼️ 素材在线预览")
                 preview = gr.Image(
-                    type="pil",
                     height=340,
                     show_label=False,
                     interactive=False,
