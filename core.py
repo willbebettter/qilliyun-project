@@ -260,35 +260,48 @@ def download_image(url: str, prompt: str = "asset") -> str | None:
     filename = f"{datetime.now():%Y%m%d_%H%M%S}_{safe_prompt}.png"
     filepath = OUTPUT_DIR / filename
 
+    header_sets = [
+        {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
+            "Accept": "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8",
+            "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8",
+            "Referer": "https://dashscope.aliyuncs.com/",
+        },
+    ]
+
     try:
         api_key = get_api_key()
+        if api_key:
+            header_sets.append({
+                "Authorization": f"Bearer {api_key}",
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
+                "Accept": "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8",
+                "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8",
+                "Referer": "https://dashscope.aliyuncs.com/",
+            })
     except Exception:
-        api_key = ""
-    headers = {
-        "Authorization": f"Bearer {api_key}",
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
-        "Accept": "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8",
-        "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8",
-        "Referer": "https://dashscope.aliyuncs.com/",
-    }
+        pass
 
-    for attempt in range(3):
-        try:
-            resp = _requests.get(url, timeout=30, headers=headers)
-            if resp.status_code == 403 and attempt < 2:
-                _time.sleep(1.5 * (attempt + 1))
-                continue
-            resp.raise_for_status()
-            filepath.write_bytes(resp.content)
-            if filepath.stat().st_size < 100:
-                filepath.unlink(missing_ok=True)
-                return None
-            return str(filepath.resolve())
-        except Exception:
-            if filepath.exists():
-                filepath.unlink(missing_ok=True)
-            if attempt < 2:
-                _time.sleep(1.5 * (attempt + 1))
+    for headers in header_sets:
+        for attempt in range(3):
+            try:
+                resp = _requests.get(url, timeout=30, headers=headers, allow_redirects=True)
+                if resp.status_code == 403 and attempt < 2:
+                    _time.sleep(2 * (attempt + 1))
+                    continue
+                resp.raise_for_status()
+                if len(resp.content) < 100:
+                    if attempt < 2:
+                        _time.sleep(2 * (attempt + 1))
+                        continue
+                    break
+                filepath.write_bytes(resp.content)
+                return str(filepath.resolve())
+            except Exception:
+                if filepath.exists():
+                    filepath.unlink(missing_ok=True)
+                if attempt < 2:
+                    _time.sleep(2 * (attempt + 1))
 
     return None
 

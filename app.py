@@ -60,12 +60,12 @@ def _strip_urls(reply: str) -> str:
 
 
 def _process_image(img_url: str | None, prompt: str) -> tuple[str | None, str, str | None]:
-    """下载远程图到本地。返回 (本地路径 或 None, 预览说明, 下载路径)。"""
+    """下载远程图到本地。返回 (预览路径/URL, 预览说明, 下载路径)。"""
     if not img_url:
         return None, NO_PREVIEW, None
     local_path = download_image(img_url, prompt)
     if not local_path:
-        return None, "⚠️ 图片下载到本地失败", None
+        return img_url, "⚠️ 图片下载到本地失败，展示远程预览", None
     session.current_image = local_path
     return local_path, _preview_info(local_path, prompt), local_path
 
@@ -106,14 +106,14 @@ def respond_generator(message, history):
         reply, img_url = chat(session.executor, message)
 
         preview_path, info, download_path = _process_image(img_url, message)
-        if preview_path and img_url:
+        if preview_path and img_url and download_path:
             session.gallery = [(preview_path, message)] + session.gallery[:11]
 
         safe_reply = _strip_urls(reply)
 
         style_label = session.style
         category_label = session.category or "通用"
-        context_line = f"\n\n🎨 画风 **{style_label}** · 📂 分类 **{category_label}**"
+        context_line = f"\n\n🎨 画风（可自定义） **{style_label}** · 📂 分类（可自定义） **{category_label}**"
 
         if safe_reply:
             if preview_path:
@@ -245,14 +245,14 @@ def build_ui():
                 style_dd = gr.Dropdown(
                     choices=list(STYLE_PRESETS.keys()),
                     value="像素风",
-                    label="🎨 画风",
+                    label="🎨 画风（可自定义）",
                 )
             with gr.Column(scale=1):
                 gr.Markdown("📂 **素材分类**", elem_classes="section-label")
                 cat_dd = gr.Dropdown(
                     choices=["（通用）"] + list(CATEGORY_TEMPLATES.keys()),
                     value="（通用）",
-                    label="📦 素材分类",
+                    label="📦 素材分类（可自定义）",
                 )
             with gr.Column(scale=2):
                 gr.Markdown("⚡ **快捷生成**", elem_classes="section-label")
