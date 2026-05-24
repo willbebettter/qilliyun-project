@@ -18,36 +18,325 @@ from core import (
 )
 
 CUSTOM_CSS = """
+/* ===== 全局基础 ===== */
 .gradio-container {
-    background: linear-gradient(135deg, #0f0c29 0%, #1a1a3e 50%, #24243e 100%) !important;
+    background: #06060c !important;
     min-height: 100vh;
+    max-width: 100% !important;
+    position: relative;
+    overflow: hidden;
 }
+
+/* ===== 动效星空背景 ===== */
+.gradio-container::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    background:
+        radial-gradient(2px 2px at 10% 20%, rgba(255,255,255,0.6), transparent),
+        radial-gradient(2px 2px at 25% 60%, rgba(255,255,255,0.5), transparent),
+        radial-gradient(1px 1px at 40% 10%, rgba(255,255,255,0.7), transparent),
+        radial-gradient(2px 2px at 55% 75%, rgba(255,255,255,0.4), transparent),
+        radial-gradient(1px 1px at 70% 35%, rgba(255,255,255,0.6), transparent),
+        radial-gradient(2px 2px at 85% 50%, rgba(255,255,255,0.5), transparent),
+        radial-gradient(1px 1px at 15% 85%, rgba(255,255,255,0.7), transparent),
+        radial-gradient(1px 1px at 50% 45%, rgba(255,255,255,0.5), transparent),
+        radial-gradient(2px 2px at 65% 15%, rgba(255,255,255,0.4), transparent),
+        radial-gradient(1px 1px at 90% 70%, rgba(255,255,255,0.6), transparent),
+        radial-gradient(2px 2px at 5% 40%, rgba(255,255,255,0.5), transparent),
+        radial-gradient(1px 1px at 35% 90%, rgba(255,255,255,0.4), transparent),
+        radial-gradient(2px 2px at 75% 80%, rgba(255,255,255,0.6), transparent),
+        radial-gradient(1px 1px at 45% 25%, rgba(255,255,255,0.7), transparent),
+        radial-gradient(2px 2px at 20% 5%, rgba(255,255,255,0.3), transparent);
+    animation: twinkle 4s ease-in-out infinite alternate;
+}
+@keyframes twinkle {
+    0% { opacity: 0.5; }
+    100% { opacity: 1; }
+}
+
+/* 流动光晕 */
+.gradio-container::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    background:
+        radial-gradient(ellipse 600px 400px at 20% 30%, rgba(120,40,200,0.08), transparent),
+        radial-gradient(ellipse 500px 350px at 75% 60%, rgba(0,150,255,0.06), transparent),
+        radial-gradient(ellipse 400px 300px at 50% 80%, rgba(200,20,120,0.05), transparent);
+    animation: glowShift 15s ease-in-out infinite;
+}
+@keyframes glowShift {
+    0%, 100% { transform: translate(0, 0); }
+    25% { transform: translate(2%, -1%); }
+    50% { transform: translate(-1%, 2%); }
+    75% { transform: translate(1%, 1%); }
+}
+
+/* 确保所有面板在星空之上 */
+.gradio-container > * { position: relative; z-index: 1; }
+
+/* ===== 标题 ===== */
 #main-title {
     text-align: center;
     background: linear-gradient(90deg, #00d2ff, #7b2ff7, #f107a3);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
-    font-size: 2.2rem !important;
+    font-size: 2.4rem !important;
     font-weight: 800 !important;
-    margin-bottom: 0 !important;
+    margin-bottom: 2px !important;
+    letter-spacing: 2px !important;
+    text-shadow: none !important;
+    filter: drop-shadow(0 0 20px rgba(123,47,247,0.4));
+    animation: titleGlow 3s ease-in-out infinite alternate;
 }
-#subtitle { text-align: center; color: #8892b0 !important; margin-top: 0 !important; }
-.sidebar-panel, .preview-panel {
-    background: rgba(255,255,255,0.04) !important;
-    border: 1px solid rgba(255,255,255,0.08) !important;
-    border-radius: 12px !important;
-    padding: 16px !important;
+@keyframes titleGlow {
+    0% { filter: drop-shadow(0 0 20px rgba(123,47,247,0.3)); }
+    100% { filter: drop-shadow(0 0 35px rgba(0,210,255,0.5)); }
 }
+#subtitle {
+    text-align: center;
+    color: #6b7fa8 !important;
+    margin-top: 0 !important;
+    font-size: 0.95rem !important;
+    letter-spacing: 1px !important;
+}
+
+/* ===== 玻璃面板通用 ===== */
+.chat-panel, .preview-panel, .settings-row {
+    background: rgba(255,255,255,0.025) !important;
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(255,255,255,0.07) !important;
+    border-radius: 18px !important;
+    padding: 20px !important;
+    position: relative;
+    z-index: 1;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.03) !important;
+    transition: border-color 0.4s ease, box-shadow 0.4s ease;
+}
+.chat-panel:hover, .preview-panel:hover, .settings-row:hover {
+    border-color: rgba(255,255,255,0.12) !important;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.3), 0 0 40px rgba(100,50,200,0.06), inset 0 1px 0 rgba(255,255,255,0.04) !important;
+}
+.chat-panel { height: 100% !important; }
+.preview-panel { height: 100% !important; }
+
+/* 设置行 */
+.settings-row {
+    margin-bottom: 14px !important;
+    align-items: end !important;
+    padding: 14px 20px !important;
+}
+
+/* ===== 面板内部标题流光 ===== */
+.preview-panel h3, .chat-panel h3, .settings-row h3 {
+    background: linear-gradient(90deg, #a78bfa, #60a5fa);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    font-weight: 700 !important;
+    letter-spacing: 0.5px !important;
+}
+
+/* ===== 图片预览窗口 ===== */
 #preview-window {
-    border: 2px solid rgba(0,210,255,0.35) !important;
-    border-radius: 12px !important;
-    background: rgba(0,0,0,0.25) !important;
-    min-height: 420px !important;
+    border: 2px solid rgba(120,80,220,0.3) !important;
+    border-radius: 14px !important;
+    background: rgba(0,0,0,0.35) !important;
+    min-height: 400px !important;
+    box-shadow: 0 0 30px rgba(100,50,200,0.08), inset 0 0 60px rgba(100,50,200,0.03) !important;
+    transition: border-color 0.5s ease, box-shadow 0.5s ease;
 }
+#preview-window:hover {
+    border-color: rgba(120,80,220,0.5) !important;
+    box-shadow: 0 0 40px rgba(100,50,200,0.12), inset 0 0 60px rgba(100,50,200,0.05) !important;
+}
+
+/* ===== 滚动条美化 ===== */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track {
+    background: transparent;
+    border-radius: 3px;
+}
+::-webkit-scrollbar-thumb {
+    background: linear-gradient(180deg, rgba(120,50,200,0.4), rgba(0,150,255,0.3));
+    border-radius: 3px;
+    transition: background 0.3s ease;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(180deg, rgba(120,50,200,0.7), rgba(0,150,255,0.5));
+}
+::-webkit-scrollbar-corner { background: transparent; }
+
+/* Firefox 滚动条 */
+* {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(120,50,200,0.4) transparent;
+}
+
+/* ===== 聊天消息气泡 ===== */
+.chatbot .user {
+    font-size: 15px !important;
+    line-height: 1.65 !important;
+}
+.chatbot .bot {
+    font-size: 15px !important;
+    line-height: 1.65 !important;
+}
+.chatbot .message {
+    padding: 12px 18px !important;
+    border-radius: 14px !important;
+    margin: 6px 0 !important;
+    max-width: 90% !important;
+    word-wrap: break-word !important;
+    animation: msgIn 0.35s ease-out;
+}
+@keyframes msgIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* 用户消息气泡发光边 */
+.chatbot .user .message-wrap {
+    border: 1px solid rgba(120,80,220,0.25) !important;
+    border-radius: 14px !important;
+    box-shadow: 0 0 12px rgba(120,80,220,0.1) !important;
+}
+/* bot 消息气泡 */
+.chatbot .bot .message-wrap {
+    border: 1px solid rgba(0,180,200,0.2) !important;
+    border-radius: 14px !important;
+    box-shadow: 0 0 12px rgba(0,180,200,0.08) !important;
+}
+
+/* 聊天区域滚动 */
+.chatbot {
+    overflow-y: auto !important;
+    scroll-behavior: smooth !important;
+}
+.chatbot .messages {
+    overflow-y: auto !important;
+}
+
+/* ===== 输入框 ===== */
+#chat-input textarea {
+    font-size: 15px !important;
+    line-height: 1.55 !important;
+    padding: 12px 16px !important;
+    border-radius: 12px !important;
+    min-height: 60px !important;
+    background: rgba(255,255,255,0.04) !important;
+    border: 1px solid rgba(255,255,255,0.1) !important;
+    color: #e2e8f0 !important;
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+#chat-input textarea:focus {
+    border-color: rgba(120,80,220,0.5) !important;
+    box-shadow: 0 0 20px rgba(120,80,220,0.15) !important;
+    outline: none !important;
+}
+#chat-input textarea::placeholder {
+    color: rgba(255,255,255,0.2) !important;
+}
+
+/* ===== 按钮通用样式 ===== */
+button, .gr-button {
+    transition: all 0.3s ease !important;
+    border-radius: 10px !important;
+    letter-spacing: 0.5px !important;
+}
+.gr-button-primary {
+    background: linear-gradient(135deg, #7b2ff7, #4f46e5) !important;
+    border: none !important;
+    box-shadow: 0 4px 16px rgba(123,47,247,0.35) !important;
+    font-weight: 600 !important;
+}
+.gr-button-primary:hover {
+    box-shadow: 0 6px 24px rgba(123,47,247,0.5) !important;
+    transform: translateY(-1px);
+}
+.gr-button-primary:active {
+    transform: translateY(1px);
+    box-shadow: 0 2px 8px rgba(123,47,247,0.3) !important;
+}
+.gr-button-secondary {
+    background: rgba(255,255,255,0.06) !important;
+    border: 1px solid rgba(255,255,255,0.1) !important;
+    color: #94a3b8 !important;
+}
+.gr-button-secondary:hover {
+    background: rgba(255,255,255,0.1) !important;
+    border-color: rgba(255,255,255,0.2) !important;
+}
+
+/* 生成按钮 loading 动画 */
+.gr-button-primary:disabled,
+.gr-button-primary[disabled] {
+    background: linear-gradient(135deg, #4a1d8a, #312e81) !important;
+    opacity: 0.7 !important;
+    cursor: not-allowed !important;
+}
+
+/* ===== 下拉框 & 输入框 ===== */
+.gr-dropdown, .gr-textbox {
+    border-radius: 10px !important;
+}
+.gr-dropdown label, .gr-textbox label {
+    color: #94a3b8 !important;
+    font-size: 0.85rem !important;
+    font-weight: 500 !important;
+}
+
+/* ===== Gallery 缩略图 ===== */
+.gr-gallery {
+    border-radius: 12px !important;
+    background: rgba(0,0,0,0.2) !important;
+    border: 1px solid rgba(255,255,255,0.05) !important;
+}
+
+/* ===== 隐藏 footer ===== */
 footer { display: none !important; }
+
+/* ===== Markdown 文本 ===== */
+.prose {
+    color: #cbd5e1 !important;
+}
+
+/* ===== 面板内部间距 ===== */
+.main-row > div {
+    display: flex !important;
+    flex-direction: column !important;
+}
+.preview-panel > * + * { margin-top: 14px !important; }
+.sidebar-panel > * + * { margin-top: 10px !important; }
+.chat-panel > * + * { margin-top: 10px !important; }
+
+/* ===== 全局平滑过渡 ===== */
+.gradio-container * {
+    transition: background 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease, opacity 0.3s ease;
+}
 """
 
-NO_PREVIEW = "*等待生成… 素材图将在此处实时预览*"
+NO_PREVIEW = "🎨 素材将在此处实时预览\n\n*在左侧输入描述后点击「生成」开始创作*"
+
+WELCOME_CHAT = [
+    {
+        "role": "assistant",
+        "content": (
+            "### 👋 你好！我是 2D 游戏素材 AI 生成助手\n\n"
+            "我可以帮你生成各种 **2D 游戏素材**，包括角色、道具、场景、UI、特效等。\n\n"
+            "**🚀 快速开始：**\n"
+            "- 在下方输入框中描述你想要的素材\n"
+            "- 点击 ✨ 生成 按钮或按 Enter 键\n"
+            "- 生成结果会在右侧实时预览\n\n"
+            "**💡 提示：** 也可以用顶部快捷按钮一键填充示例描述！"
+        ),
+    }
+]
 
 
 class Session:
@@ -96,14 +385,14 @@ def _process_image(img_url: str | None, prompt: str) -> tuple[str | None, str, s
         return None, NO_PREVIEW, None
     local_path = download_image(img_url, prompt)
     if not local_path:
-        return img_url, f"⚠️ 预览加载中（远程）\n\n{img_url}", None
+        return None, f"⚠️ 图片下载失败，请重试", None
     session.current_image = local_path
     return local_path, _preview_info(local_path, prompt), local_path
 
 
 def respond(message, history):
     if not message.strip():
-        return history, "", None, NO_PREVIEW, gr.update(interactive=False), session.gallery
+        return history, "", None, NO_PREVIEW, gr.update(interactive=False), session.gallery, gr.update(interactive=True)
 
     session.ensure_executor()
     try:
@@ -128,6 +417,7 @@ def respond(message, history):
         info,
         gr.update(interactive=has_image, value=download_path),
         session.gallery,
+        gr.update(interactive=True),
     )
 
 
@@ -169,7 +459,7 @@ def clear_memory():
     session.reset_executor()
     session.current_image = None
     return (
-        [],
+        WELCOME_CHAT.copy(),
         None,
         NO_PREVIEW,
         gr.update(interactive=False, value=None),
@@ -191,55 +481,55 @@ def build_ui():
             elem_id="subtitle",
         )
 
-        with gr.Row():
-            # ── 左侧设置栏 ──
-            with gr.Column(scale=1, elem_classes="sidebar-panel"):
-                gr.Markdown("### ⚙️ 生成设置")
+        with gr.Row(elem_classes="settings-row"):
+            with gr.Column(scale=1):
                 style_dd = gr.Dropdown(
                     choices=list(STYLE_PRESETS.keys()),
                     value="像素风",
                     label="🎨 画风",
                 )
+            with gr.Column(scale=1):
                 cat_dd = gr.Dropdown(
                     choices=["（通用）"] + list(CATEGORY_TEMPLATES.keys()),
                     value="（通用）",
                     label="📦 素材分类",
                 )
-                status_md = gr.Markdown("当前：**像素风** · **通用**")
-
-                gr.Markdown("### 💡 快捷示例")
+            with gr.Column(scale=2):
                 with gr.Row():
                     ex_btn1 = gr.Button("⚔️ 战士", size="sm")
                     ex_btn2 = gr.Button("🧪 药水", size="sm")
                     ex_btn3 = gr.Button("🌲 场景", size="sm")
-                with gr.Row():
                     ex_btn4 = gr.Button("🪙 金币", size="sm")
                     ex_btn5 = gr.Button("💀 Boss", size="sm")
                     rand_btn = gr.Button("🎲 随机", size="sm")
-                clear_btn = gr.Button("🗑️ 清空对话", variant="secondary")
+            with gr.Column(scale=1):
+                status_md = gr.Markdown("当前：**像素风** · **通用**")
+                clear_btn = gr.Button("🗑️ 清空对话", variant="secondary", size="sm")
 
-            # ── 中间对话区 ──
-            with gr.Column(scale=2):
+        with gr.Row(elem_classes="main-row"):
+            with gr.Column(scale=5, elem_classes="chat-panel"):
                 chatbot = gr.Chatbot(
                     label="💬 对话",
-                    height=460,
+                    value=WELCOME_CHAT,
+                    height=560,
                     buttons=["copy"],
+                    show_label=True,
                 )
                 with gr.Row():
                     msg_input = gr.Textbox(
                         placeholder="描述你的素材，例如：持盾的骑士角色，蓝色盔甲，待机姿势…",
                         label="素材描述",
-                        scale=5,
+                        scale=6,
                         lines=2,
+                        elem_id="chat-input",
                     )
                     send_btn = gr.Button("✨ 生成", variant="primary", scale=1)
 
-            # ── 右侧预览 & 保存区 ──
-            with gr.Column(scale=2, elem_classes="preview-panel"):
+            with gr.Column(scale=3, elem_classes="preview-panel"):
                 gr.Markdown("### 🖼️ 素材在线预览")
                 preview = gr.Image(
                     label="",
-                    height=420,
+                    height=400,
                     show_label=False,
                     interactive=False,
                     elem_id="preview-window",
@@ -266,7 +556,7 @@ def build_ui():
                 gallery = gr.Gallery(
                     label="点击缩略图可切换预览",
                     columns=3,
-                    height=180,
+                    height=160,
                     object_fit="contain",
                     allow_preview=True,
                 )
@@ -283,9 +573,26 @@ def build_ui():
             [status_md],
         )
 
-        gen_outputs = [chatbot, msg_input, preview, preview_info, save_btn, gallery]
-        for evt in (msg_input.submit, send_btn.click):
-            evt(respond, [msg_input, chatbot], gen_outputs)
+        gen_outputs_no_btn = [chatbot, msg_input, preview, preview_info, save_btn, gallery]
+        gen_outputs = gen_outputs_no_btn + [send_btn]
+
+        send_btn.click(
+            lambda: gr.update(interactive=False),
+            outputs=[send_btn],
+        ).then(
+            respond,
+            [msg_input, chatbot],
+            gen_outputs,
+        )
+
+        msg_input.submit(
+            lambda: gr.update(interactive=False),
+            outputs=[send_btn],
+        ).then(
+            respond,
+            [msg_input, chatbot],
+            gen_outputs,
+        )
 
         gallery.select(
             on_gallery_select,
@@ -316,17 +623,17 @@ def build_ui():
 
 def _theme():
     return gr.themes.Base(
-        primary_hue="cyan",
-        secondary_hue="purple",
+        primary_hue="violet",
+        secondary_hue="blue",
         neutral_hue="slate",
     ).set(
-        body_background_fill="#0f0c29",
-        body_background_fill_dark="#0f0c29",
-        block_background_fill="rgba(255,255,255,0.05)",
-        block_background_fill_dark="rgba(255,255,255,0.05)",
-        block_border_color="rgba(255,255,255,0.1)",
-        block_label_text_color="#ccd6f6",
-        input_background_fill="rgba(255,255,255,0.07)",
+        body_background_fill="#06060c",
+        body_background_fill_dark="#06060c",
+        block_background_fill="rgba(255,255,255,0.03)",
+        block_background_fill_dark="rgba(255,255,255,0.03)",
+        block_border_color="rgba(255,255,255,0.06)",
+        block_label_text_color="#a5b4fc",
+        input_background_fill="rgba(255,255,255,0.04)",
     )
 
 
