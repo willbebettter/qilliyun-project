@@ -310,7 +310,7 @@ def build_ui():
 - **风格设置**：选择不同的画风风格，影响生成效果
 - **素材分类**：选择素材类型（角色/道具/场景等）
 - **快捷生成**：点击顶部按钮一键生成示例素材
-- **图片存储**：图片自动保存到 `output/current_session_images/` 文件夹
+- **图片存储**：本轮对话图片自动保存到路径下的`output/current_session_images/`文件夹
                     """,
                     elem_classes="tips-area",
                 )
