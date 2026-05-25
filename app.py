@@ -274,14 +274,18 @@ def build_ui():
                 style_dd = gr.Dropdown(
                     choices=[f" {k}" for k in STYLE_PRESETS.keys()],
                     value=" 像素风",
-                    label="🎨 画风（可自定义）",
+                    label="🎨 画风",
+                    allow_custom_value=False,
+                    filterable=False,
                 )
             with gr.Column(scale=1):
                 gr.Markdown("📂 **素材分类**", elem_classes="section-label")
                 cat_dd = gr.Dropdown(
                     choices=[" （通用）"] + [f" {k}" for k in CATEGORY_TEMPLATES.keys()],
                     value=" （通用）",
-                    label="📦 素材分类（可自定义）",
+                    label="📦 素材分类",
+                    allow_custom_value=False,
+                    filterable=False,
                 )
             with gr.Column(scale=2):
                 gr.Markdown("⚡ **快捷生成**", elem_classes="section-label")
