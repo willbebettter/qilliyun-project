@@ -51,8 +51,7 @@ def _preview_info(local_path: str | None, prompt: str = "") -> str:
     return (
         f"**{p.name}**  \n"
         f"尺寸 1024×1024 · {size_kb} KB  \n"
-        f"描述：{prompt or '—'}  \n"
-        f"💡 点击图片中央可全屏查看（按 Esc 退出）"
+        f"描述：{prompt or '—'}"
     )
 
 
@@ -63,8 +62,6 @@ def _build_final_prompt(user_prompt: str, style: str, category: str) -> str:
         base = cat_template.format(desc=user_prompt.strip())
     else:
         base = user_prompt.strip()
-    if not base.endswith("。"):
-        base = base.rstrip(".,。") + "，"
     if style_hint:
         base = base + f"风格要求：{style_hint}。"
     return base
@@ -129,7 +126,7 @@ def respond_generator(message, history):
             "role": "assistant",
             "content": "🎨 **AI 正在生成素材中…**  \n\n"
             f"🎨 风格：**{session.style}**  ·  📂 分类：**{category_display}**\n"
-            f"（融合提示词：{final_prompt[:80]}{'…' if len(final_prompt) > 80 else ''}）\n\n"
+            f"用户输入：{message}\n\n"
             '<span class="loading-dots"><span></span><span></span><span></span></span>'
         },
     ]
@@ -260,42 +257,6 @@ def build_ui():
     });
   }, 500);
   setTimeout(function() { clearInterval(tid); }, 15000);
-})();
-</script>
-""")
-
-        gr.HTML("""
-<div id="image-fullscreen-overlay" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh;
-  background:rgba(0,0,0,0.92); z-index:99999; cursor:pointer;
-  display:none; align-items:center; justify-content:center;"
-  onclick="this.style.display='none'">
-  <img id="image-fullscreen-img" style="max-width:95vw; max-height:95vh; object-fit:contain;
-    border-radius:12px; box-shadow:0 0 80px rgba(139,92,246,0.3);" />
-  <span style="position:absolute; top:24px; right:36px; color:#fff; font-size:32px;
-    opacity:0.6; cursor:pointer;" onclick="document.getElementById('image-fullscreen-overlay').style.display='none'">&times;</span>
-</div>
-<script>
-(function() {
-  function setupImageClick() {
-    var previewImg = document.querySelector('#preview-window img');
-    if (!previewImg) return;
-    if (previewImg.dataset.clickSetup === '1') return;
-    previewImg.dataset.clickSetup = '1';
-    previewImg.style.cursor = 'pointer';
-    previewImg.addEventListener('click', function(e) {
-      var overlay = document.getElementById('image-fullscreen-overlay');
-      var fullImg = document.getElementById('image-fullscreen-img');
-      fullImg.src = previewImg.src;
-      overlay.style.display = 'flex';
-      e.stopPropagation();
-    });
-  }
-  setInterval(setupImageClick, 800);
-  document.addEventListener('keydown', function(e) {
-    if (e.key === 'Escape') {
-      document.getElementById('image-fullscreen-overlay').style.display = 'none';
-    }
-  });
 })();
 </script>
 """)
