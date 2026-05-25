@@ -370,8 +370,6 @@ def build_ui():
                 preview = gr.Image(
                     height=400,
                     show_label=False,
-                    show_download_button=False,
-                    show_fullscreen_button=False,
                     interactive=False,
                     elem_id="preview-window",
                 )
