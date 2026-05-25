@@ -381,6 +381,18 @@ label, .gr-input-label {
     box-shadow: 0 0 55px rgba(100,50,200,0.20), inset 0 0 80px rgba(100,50,200,0.08) !important;
 }
 
+#preview-window img {
+    cursor: pointer !important;
+}
+
+#preview-window .icon-buttons,
+#preview-window [class*="icon-button"],
+#preview-window [class*="download"],
+#preview-window [class*="fullscreen"],
+#preview-window button[title] {
+    display: none !important;
+}
+
 /* ============================================================
    滚动条 — 渐变炫彩
    ============================================================ */
