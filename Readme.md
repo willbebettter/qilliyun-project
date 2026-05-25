@@ -1,6 +1,7 @@
 # 🎮 PixelForge
 
 AI 驱动的 2D 游戏素材生成器 — 基于 LangChain Agent + 阿里云 DashScope，输入文字描述，自动生成像素风、卡通、赛博朋克等多种风格的 2D 游戏素材图。
+bilibili视频演示地址:https://www.bilibili.com/video/BV1FzG46yE8Q/
 
 ## ✨ 功能特性
 
