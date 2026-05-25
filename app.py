@@ -51,8 +51,7 @@ def _preview_info(local_path: str | None, prompt: str = "") -> str:
     return (
         f"**{p.name}**  \n"
         f"尺寸 1024×1024 · {size_kb} KB  \n"
-        f"描述：{prompt or '—'}  \n"
-        f"💡 点击图片可全屏查看"
+        f"描述：{prompt or '—'}"
     )
 
 
@@ -63,8 +62,6 @@ def _build_final_prompt(user_prompt: str, style: str, category: str) -> str:
         base = cat_template.format(desc=user_prompt.strip())
     else:
         base = user_prompt.strip()
-    if not base.endswith("。"):
-        base = base.rstrip(".,。") + "，"
     if style_hint:
         base = base + f"风格要求：{style_hint}。"
     return base
@@ -121,13 +118,15 @@ def respond_generator(message, history):
         return
 
     final_prompt = _build_final_prompt(message, session.style, session.category)
+    category_display = session.category or "通用"
 
     loading_history = history + [
         {"role": "user", "content": message},
         {
             "role": "assistant",
             "content": "🎨 **AI 正在生成素材中…**  \n\n"
-            f"（融合提示词：{final_prompt[:80]}{'…' if len(final_prompt) > 80 else ''}）\n\n"
+            f"🎨 风格：**{session.style}**  ·  📂 分类：**{category_display}**\n"
+            f"用户输入：{message}\n\n"
             '<span class="loading-dots"><span></span><span></span><span></span></span>'
         },
     ]
